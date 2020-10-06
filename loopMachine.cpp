@@ -91,7 +91,7 @@ const char *getLoopCommandName(u16 cmd)
 publicLoopMachine::publicLoopMachine() :
    AudioStream(LOOPER_NUM_CHANNELS,LOOPER_NUM_CHANNELS,inputQueueArray)
 {
-    LOG("publicLoopMachine ctor",0);
+    LOG("publicLoopMachine ctor version 2.0",0);
     pCodec = AudioCodec::getSystemCodec();
     assert(pCodec);
 
