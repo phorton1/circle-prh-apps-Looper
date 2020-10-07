@@ -1,201 +1,105 @@
-# Looper Concepts
+# rpi Bare Metal Looper
 
-## Caveat
+**THIS PAGE IS UNDER CONSTRUCTION**
 
-After struggling mightily with USB mice, and MIDI devices, I had to give up on them,
+
+This repository contains the source code and other information required to
+build a bare metal rPi based Audio Looper.
+
+[![Looper1-openAndRunning](images/Looper1-openAndRunning_resized.jpg)](images/Looper1-openAndRunning.jpg)
+
+This project brings together what, until now, have been multiple disparate parts of the puzzle,
+and is a milestone in my **[rPi bare metal vGuitar rig](https://hackaday.io/project/165696-rpi-bare-metal-vguitar-rig)**
+hackaday project.
+
+It is based on my prior projects (repositories) which include my fork of the
+**[circle](https://github.com/phorton1/circle)** rPi bare metal C++ framework,
+and my extensions to it, including a port of the Teensy Audio library to
+rPi bare metal in my **[circle-prh](https://github.com/phorton1/circle-prh)** project.
+
+The box (my bare metal rPi development environment) also has a Teensy 3.2 board
+in it (for serial communications with, and control of, the rPi).  So the
+box ALSO includes the **[teensyPiLooper](https://github.com/phorton1/Arduino-teensyPiLooper)**
+repository which contains the code which runs on the Teensy 3.2 that communicates
+with, and controls, the rPi via serial data, as well as commmunicating with my
+**[teensyExpression Pedal](https://github.com/phorton1/Arduino-teensyExpression)**
+via serial data.
+
+Above is a photo of the first 3D printed version of the Looper.  There have
+been several phsyical iterations of the "box".  The 3D printing information
+(fusion, STL files, etc) for that can be found at **[TBD]** and the second
+iteration, the one I am currently on as of this writing, can be found at
+**[TBD]**
+
+This readme file is mostly concerned with the software aspects of the project.
+Details about the electrical circuits, schematics, etc, can be found in the
+[hardware/](hardware/) subfolder.
+
+
+## THIS README FILE IS UNDER CONSTRUCTION ##
+
+The information below this point needs to be updated.  It is
+generally "correct", but very badly organized.
+
+I really need to (and can, finally!) present the overall architecture
+of the system. It is complicated.
+
+This Looper is only one piece in the (my) vGuitar rig.  And with
+this milestone I can now describe, have a better vision, of how
+it all fits together.  So there is one, highest level view of the
+"system" which includes not only this Looper box, but the
+teensyExpression pedal, as well as the "stuff" running on an
+iPad, and how it all ends up going from my guitar into the PA.
+
+That architectural discussion has, in this readme, been deferred
+to an upcoming hackaday page or sub-project that continues in the
+vein of the original *rPi bare metal vGuitar rig* project.
+
+At a lower level, this development of an actual Circle based audio
+"application" also finally gives me an opportunity to describe,
+in software terms, how "it all works".  So the specific
+architecture of this application is (intended to be)
+discussed here .. but is not ... yet!
+
+Today is not the day to complete that documentation
+effort.  I have some other code I want, need, to write today.
+
+So, please come back later, and take what follows with
+the understanding that these were just "personal notes" that
+happened to get published before the actual public "roll out" of
+this Looper project.
+
+I am keeping the notes below, for the time being, for posterities sake.
+
+Thanks!
+
+-- Patrick
+
+
+## No USB MIDI devices
+
+After struggling mightily with Circle and USB mice, and MIDI devices, I had to give up on them,
 at least for the time being.  It seemed that both were so processor intensive as to
 interfere with the Audio processing, so I have reverted to serial command input
-which, so far, seems to work.  I need to focus on the state machine.
+which, so far, seems to work (Hence the teensyExpresion pedal)
 
 ## Basic Architecture - tracks, clips, (current, used, and selected)
 
-The looper consists of 4 sequential "tracks" with upto 3 layered "clips" per track.
-
-The only valid command for a completely empty, initialized looper, is to start
-recording (RECORD) clip0 on track0. I will also refer to this as clip(0,0).
-The track that is currently recording or playing is considered the "current"
-track.
-
-There is the notion of a "used" track or clip.   A used clip is one that
-has been recorded or IS BEING recorded.  A used track is a track that has a
-used clip. So, when the looper is first started there are no used tracks or
-clips, but as soon as one starts to record clip(0,0), there is one used
-track, and it has one used clip at that moment.
-
-There is a notion of a "selected" track and clip. The user may "select"
-a given track and/or clip via the user interface NEXT_CLIP and NEXT_TRACK
-buttons.  However, they cannot just select ANY clip in the matrix.  They
-are constrained to selecting only used tracks and clips, or the NEXT EMPTY
-clip or track.  And of course, they can only select upto 4 tracks of 3
-clips each.
-
-Thus, when the looper is empty, a user is constrained to selecting clip(0,0),
-and the NEXT_CLIP and NEXT_TRACK buttons are disabled (or not visible).
-But as soon as one starts to record clip(0,0), then both buttons are enabled
-(or become visible) and the user can select any of the following track/clips:
-
-    clip(0,0) - the current (first) clip being recorded
-    clip(0,1) - the next empty clip in the current track
-    clip(1,0) - the 0th, empty clip in the next available track
-
-Note that the selected track and clip can be different than the
-currently playing/recording track or clip.
-
-## COMMANDS and UI
-
-The NEXT_CLIP and NEXT_TRACK commands change the selected track and clip.
-
-Most other COMMANDS can be generally thought of as acting on the selected
-track and clip, or on the looper in general.  COMMANDS not only affect the
-selected track and clip, but they may (likely) affect the currently
-playing or recording track/clip as well.
-
-Recorded clips in the UI show up as green bars.  Clips being recorded
-in the UI show up as red bars.
-
-The user interface shows a thin white box around the currently selected track,
-and a bolder yellow or red box around the selected clip, depending on whether it has
-content, or not.  It also flashes those bold boxes (or a white box around the
-given clip), when a command is "pending", which will be described later.
-
-The UI generally follows, and needs to follow the state machine.
-
-In the simple case of the initial RECORD command, the command clearly
-applies to clip(0,0) and tells the looper to start recording it.
+The looper consists of 4 sequential "tracks" with upto 4 layered "clips" per track.
 
 
 ## BASE CLIP, LOOP POINTS, MULTIPLES, and PENDING COMMANDS
 
-So, now we introduce the notion of the BASE CLIP in a track, which is
+There is the notion of the BASE CLIP in a track, which is
 just the first (0th) clip in the track.  The 0th clip in a track is
 always recorded first, and is called the "base clip" because the length
 of it determines the length of all the other clips in the track, which
 must be integral multiples of the base clip length (1z, 2x, 3x, etc).
 
-For example, let's say the user starts recording clip(0,0)
-and 15 seconds later decides to start looping it and recording clip(0,1)
-on top of it.   The user will press the following buttons:
-
-- **RECORD** - starts recording (default selected) clip(0,0)
-    a red bar moves from left to right on the screen indicating
-    "progress" of the recording.
-
-- **SELECT_NEXT_CLIP** - highlighs clipt(0,1) the next clip in track(0)
-    in red indicating it will record on the next RECORD command
-
-- 15 seconds goes by ... and the user presses ...
-
-- **RECORD** - which starts IMMEDIATELY looping (playing) clip(0,0)
-   and starts IMMEDIATELY recording clip(0,1).
-
-   *If the user did not want to start recording another layer,
-   but did want to start looping clip(0,0) they would have pressed PLAY.
-   Or if they wanted to stop recording clip(0,0) and save it for
-   later playback, they would have pressed STOP. But they pressed
-   "RECORD", so clip(0,1) starts recording as clip(0,0) starts playing.*
-
-Now, lets say the user plays a lead for 10 seconds, and then
-hits the PLAY button (clip(0,1) is still selected.)
-
-There are still 5 seconds of clip(0,0) to play!
-
-At that moment, the PLAY command is considered to be **PENDING**,
-and it won't actually take place until the base clip has completed
-(comes around to a **LOOP POINT**).
-
-## Integral Multiples of Base Track ..
-
-So, in the above example the looper keeps playing clip(0,0) and recording
-clip(0,1) for 5 more seconds AFTER the **PLAY** button is pressed,
-until the **BASE CLIP** comes around to a **LOOP POINT** and at that time
-(5 seconds later) the looper **saves** the recording for clip(0,1) and starts
-**playing it synchronously** with clip(0,0).  Notice that in this case both
-clips have exactly the same length (15 seconds).
-
-Alternatively, if the user had instead waited 22 seconds (instead of
-10 seconds) in the example above, by that point in time the looper would
-have been 7 seconds into the **SECOND** time through clip(0,0)
-and there would still be 8 (EIGHT) seconds of clip(0,0)
-to play! So clip(0,1) would end up being exactly twice as
-long as clip(0,1).
-
-This is how it works to ensure that the length of clips(1..3)
-are always an integral multiple of the length of clip(0) in a
-given track.
-
-More subtely, in this section we introduced the notion that
-commands that affect the BASE CLIP recording *USUALLY* happen
-immediately, but that commands that happen while a clip is
-*PLAYING* usually are considered PENDING until the next
-LOOP POINT.
-
-
-## STATE MACHINE 1 - Changing commands in the middle of the stream
-
-Because of pending commands, it is possible to "change your mind"
-about certain commands, as long as you press the buttons in time.
-
-Obvioulsy(?) we are not talking about the "immediate" commands that
-can happen when recording clip(0) in a given track, but rather for
-commands that have been issued (are PENDING) but have not yet taken
-effect.
-
-The basic rule is that CHANGING THE SELECTED TRACK or CLIP
-cancels any command that may be PENDING.
-
-The user will record 15 seconds on clip(0,0), then start PLAYING it,
-THEN decide to start recording clip(0,1), but then change their mind
-and decide to cancel the upcoming recording (and just continue
-playing clip(0,0)).   So, from a completely empty looper, they issue
-the following sequence of commands
-
-- **RECORD** - start recording clip(0,0)
-- play guitar for 15 seconds
-- **PLAY** - they press "play" and clip(0,0) starts looping
-- **SELECT_NEXT_CLIP** - the user selects clip(0,1). It is highlighted in red.
-
-Now, while clip(0,0) is loopig through it's 15 seconds of fame
-over and over again, at some point, lets say 5 seconds into
-any one of those loops, the user presses the RECORD button.
-
-- **RECORD** - pressed 5 seconds into the 15 second base clip
-
-So there are still 10 seconds for the base clip(0,0) to play
-before the pending RECORD command will take effect. If the user
-does nothing more at this point, in 10 seconds, it **WILL** start
-recording (on a LOOP POINT of the BASE CLIP).
-
-But they change their mind, and decide to go back to just
-*playing* the base clip.  So they rapidly hit the SELECT_NEXT_CLIP
-button.
-
-- **SELECT_NEXT_CLIP** - the user selects goes back to selecting
-   the base clip(0,0). It is highlighted in yellow.
-
-This has the effect of clearing the pending RECORD command,
-so the looper just keeps doing what it was doing, which is
-playing back clip(0,0) over and over again.
-
-To summarize the points of this section:
-
-- **CHANGING THE SELECTION DELETES ANY PENDING COMMAND!!**
-
-- **THE PENDING COMMAND ACTS ON THE SELECTED TRACK OR CLIP AT THE NEXT LOOP POINT**
-
-- **commands effected while BASE CLIP0 is recording are immediate**
-
-
-The point of this whole discussion was to note that there is
-only ONE PENDING COMMAND at any given time, and it pertains
-to the CURRENTLY SELECTED TRACK.
-
-Although it seems trivial, this will become important when we
-discuss the cross-fade mechanism.
-
 
 # CROSSFADES
 
-I had a working implementation of the above basic state machine until
+I had a working implementation of the basic Looper
 I noticed the need for "cross fades".  Cross fades have made the whole
 thing MUCH more complicated.
 
@@ -293,18 +197,3 @@ previous "simple" state machine, I could get away with just replacing
 the "pending command" with a new one (or deleting the old one) as there
 was no interaction between "previous" and "next" clips recording or
 playback.
-
-
-## Crossfade state machine - previous, current, and selected track/clips.
-
-I *believe* that the state machine can still work with simple "pending" commands,
-that happen at the LOOP_POINT of a given BASE_CLIP, and that with a relatively
-short (1/10 of a second) CROSSFADE there is little to no chance that a command
-will be issued during that period of time that will be non-sensical to the user.
-
-But it *may* require double buffering of the pending commands. Not sure.
-
-Maybe not.  As the "cross fade" period of time indicates that SOME OTHER
-TRACK (or no TRACK) has become the next target for commands.
-
-Maybe not.
