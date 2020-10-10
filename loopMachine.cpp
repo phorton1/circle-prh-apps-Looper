@@ -2,6 +2,9 @@
 #include <circle/logger.h>
 #include <circle/synchronize.h>
 
+// this comment is a test change for git
+
+
 // 2020-09-29 - there are issues with the state machine from real world testing
 //    It fairly often stops or fails to play a track, which suddenly appears to
 //    have no content?   Other times, all tracks started playing at once.
