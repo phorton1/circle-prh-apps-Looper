@@ -472,6 +472,13 @@ class publicLoopMachine : public AudioStream
 
         logString_t *getNextLogString();
 
+         int getPendingLoopNotify()
+        {
+            if (m_pending_loop_notify)
+                return m_pending_loop_notify--;
+            return 0;
+        }
+
     protected:
 
         // audio system implementation
@@ -486,6 +493,7 @@ class publicLoopMachine : public AudioStream
             m_pending_command = 0;
             m_selected_track_num = -1;
             m_dub_mode = false;
+            m_pending_loop_notify = 0;
         }
 
         // member variables
@@ -504,6 +512,8 @@ class publicLoopMachine : public AudioStream
         logString_t *m_pFirstLogString;
         logString_t *m_pLastLogString;
 
+        volatile int m_pending_loop_notify;
+
 };
 
 
@@ -521,6 +531,7 @@ class loopMachine : public publicLoopMachine
         void incDecRunning(int inc);
 
         void LogUpdate(const char *lname, const char *format, ...);
+
 
     private:
 

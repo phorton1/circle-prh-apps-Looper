@@ -719,15 +719,16 @@ void loopMachine::updateState(void)
     // at which we should latch the pending command into
     // the current command ...
 
+	loopTrack *pCurTrack = m_cur_track_num >= 0 ?  getTrack(m_cur_track_num) : 0;
+	loopClip  *pClip0 = pCurTrack ? pCurTrack->getClip(0) : 0;
+	u16 clip0_state = pClip0 ? pClip0->getClipState() : 0;
+		// the current base clip, and it's state, if any
+	bool at_loop_point = (clip0_state & CLIP_STATE_PLAY_MAIN) && !pClip0->getPlayBlockNum();
+	if (at_loop_point)
+		m_pending_loop_notify++;
+
     if (m_pending_command)
     {
-        loopTrack *pCurTrack = m_cur_track_num >= 0 ?  getTrack(m_cur_track_num) : 0;
-        loopTrack *pSelTrack = getTrack(m_selected_track_num);
-        loopClip  *pClip0 = pCurTrack ? pCurTrack->getClip(0) : 0;
-        u16 clip0_state = pClip0 ? pClip0->getClipState() : 0;
-            // the current base clip, and it's state, if any
-
-        bool at_loop_point = (clip0_state & CLIP_STATE_PLAY_MAIN) && !pClip0->getPlayBlockNum();
         bool latch_command =
             !m_running ||
             at_loop_point ||
@@ -738,6 +739,8 @@ void loopMachine::updateState(void)
 
         if (latch_command)
         {
+			loopTrack *pSelTrack = getTrack(m_selected_track_num);
+
             m_cur_command = m_pending_command;
             m_pending_command = 0;
 

@@ -288,6 +288,12 @@ void uiWindow::enableEraseButton(int i, bool enable)
 // virtual
 void uiWindow::updateFrame()
 {
+	int notify_loop = pTheLooper->getPendingLoopNotify();
+	if (notify_loop)
+	{
+		sendSerialMidiCC(NOTIFY_LOOP,notify_loop);
+	}
+
 	#if !USE_SERIAL_INTERRUPTS
 		// polling approach
 
