@@ -218,127 +218,251 @@ void loopClip::_endFadeOut()
 //----------------------------------------------
 // update
 //----------------------------------------------
+// note use of doubles for math ....
 
-#define FADE_BLOCK_INCREMENT (1.0/((float)CROSSFADE_BLOCKS))
-    // percentage fade per block
+#if USE_32BIT_MIX
 
-#define FADE_SAMPLE_INCREMENT (FADE_BLOCK_INCREMENT/((float)AUDIO_BLOCK_SAMPLES))
-    // percentage fade per sample
+	#define FADE_BLOCK_INCREMENT (1.0/((double)CROSSFADE_BLOCKS))
+		// percentage fade per block
+
+	#define FADE_SAMPLE_INCREMENT (FADE_BLOCK_INCREMENT/((double)AUDIO_BLOCK_SAMPLES))
+		// percentage fade per sample
+
+	void loopClip::update(s32 *ip, s32 *op)
+	{
+		s16 *rp = 0;
+		s16 *pp_main = 0;
+		s16 *pp_fade = 0;
+
+		if (m_state & (CLIP_STATE_RECORD_IN | CLIP_STATE_RECORD_MAIN | CLIP_STATE_RECORD_END))
+			rp = getBlock(m_record_block);
+		if (m_state & (CLIP_STATE_PLAY_MAIN))
+			pp_main = getBlock(m_play_block);
+		if (m_state & (CLIP_STATE_PLAY_END))
+			pp_fade = getBlock(m_crossfade_start+m_crossfade_offset);
+
+		bool fade_in = (pp_main && m_play_block < CROSSFADE_BLOCKS) ? 1 : 0;
+		float sample_fade = FADE_SAMPLE_INCREMENT;
+
+		for (int channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+		{
+			double i_fade = 1.0;
+			double o_fade = 1.0;
+
+			if (fade_in)
+				i_fade = ((double)m_play_block) * FADE_BLOCK_INCREMENT;
+			if (pp_fade)
+				o_fade = ((double)(CROSSFADE_BLOCKS-m_crossfade_offset)) * FADE_BLOCK_INCREMENT;
+
+			for (int i=0; i<AUDIO_BLOCK_SAMPLES; i++)
+			{
+				// add the unmodified input data to the recording
+				// should not overflow as *ip is raw 16 bit input cast to 32 bits
+
+				if (rp) *rp++ = *ip++;
+
+				if (!m_mute)
+				{
+					// add the main input (subject to in-fading)
+
+					if (pp_main)
+					{
+						double val = *pp_main++;
+						val = val * m_volume;
+						if (fade_in)
+						{
+							val = val * i_fade;
+							i_fade += sample_fade;
+						}
+						*op += (s32) val;
+				   }
+
+					if (pp_fade)
+					{
+						double val = *pp_fade++;
+						val = val * m_volume;
+						val = val * o_fade;
+						*op += (s32) val;
+						o_fade -= sample_fade;
+					}
+				}
+
+				op++;
+			}
+		}
+
+		// THIS STUFF APPEARS UNCHANGE FOR USE_32BIT_MIX
+
+		// increment block pointers
+		// handling post increment state changes ....
+
+		if (rp)
+		{
+			m_record_block++;
+
+			// if we have recorded all of the FADE_IN, progress
+			// from state RECORD_IN to state RECORD_MAIN
+
+			if ((m_state & CLIP_STATE_RECORD_IN) &&
+				(m_record_block >= CROSSFADE_BLOCKS))
+			{
+				m_state &= ~CLIP_STATE_RECORD_IN;
+				m_state |= CLIP_STATE_RECORD_MAIN;
+			}
+
+			// if RECORD_END, and m_record_block has reached the crossfade out,
+			// we change our state (but leave the loop machine to it's own fate)
+
+			else if ((m_state & CLIP_STATE_RECORD_END) &&
+				m_record_block == m_num_blocks + CROSSFADE_BLOCKS)
+			{
+				_finishRecording();
+			}
+		}
+
+		if (pp_fade)
+		{
+			m_crossfade_offset++;
+			if (m_crossfade_offset == CROSSFADE_BLOCKS)
+				_endFadeOut();
+		}
+		if (pp_main)
+		{
+			m_play_block++;
+			if (m_play_block == m_num_blocks)
+			{
+				_startCrossFadeOut();
+				// note that this post increment starting of
+				// the next loop can be canceled in the next
+				// updateState() that takes place at the
+				// track change.
+			}
+		}
+	}
 
 
-void loopClip::update(audio_block_t *in[], audio_block_t *out[])
-    // update with post-increments and wrapping
-{
-    s16 *rp = 0;
-    s16 *pp_main = 0;
-    s16 *pp_fade = 0;
+#else	// USE OLD 16 BIT MIX
 
-    if (m_state & (CLIP_STATE_RECORD_IN | CLIP_STATE_RECORD_MAIN | CLIP_STATE_RECORD_END))
-        rp = getBlock(m_record_block);
-    if (m_state & (CLIP_STATE_PLAY_MAIN))
-        pp_main = getBlock(m_play_block);
-    if (m_state & (CLIP_STATE_PLAY_END))
-        pp_fade = getBlock(m_crossfade_start+m_crossfade_offset);
+	#define FADE_BLOCK_INCREMENT (1.0/((float)CROSSFADE_BLOCKS))
+		// percentage fade per block
 
-    bool fade_in = (pp_main && m_play_block < CROSSFADE_BLOCKS) ? 1 : 0;
-    float sample_fade = FADE_SAMPLE_INCREMENT;
+	#define FADE_SAMPLE_INCREMENT (FADE_BLOCK_INCREMENT/((float)AUDIO_BLOCK_SAMPLES))
+		// percentage fade per sample
 
-    for (int channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
-    {
-        s16 *ip = in[channel]->data;
-        s16 *op = out[channel]->data;
+	void loopClip::update(audio_block_t *ip[], audio_block_t *out[])
+	// update with post-increments and wrapping
+	{
+		s16 *rp = 0;
+		s16 *pp_main = 0;
+		s16 *pp_fade = 0;
 
-        float i_fade = 1.0;
-        float o_fade = 1.0;
+		if (m_state & (CLIP_STATE_RECORD_IN | CLIP_STATE_RECORD_MAIN | CLIP_STATE_RECORD_END))
+			rp = getBlock(m_record_block);
+		if (m_state & (CLIP_STATE_PLAY_MAIN))
+			pp_main = getBlock(m_play_block);
+		if (m_state & (CLIP_STATE_PLAY_END))
+			pp_fade = getBlock(m_crossfade_start+m_crossfade_offset);
 
-        if (fade_in)
-            i_fade = ((float)m_play_block) * FADE_BLOCK_INCREMENT;
-        if (pp_fade)
-            o_fade = ((float)(CROSSFADE_BLOCKS-m_crossfade_offset)) * FADE_BLOCK_INCREMENT;
+		bool fade_in = (pp_main && m_play_block < CROSSFADE_BLOCKS) ? 1 : 0;
+		float sample_fade = FADE_SAMPLE_INCREMENT;
 
-        for (int i=0; i<AUDIO_BLOCK_SAMPLES; i++)
-        {
-            // add the unmodified input data to the recording
+		for (int channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+		{
+			s16 *ip = in[channel]->data;
+			s16 *op = out[channel]->data;
 
-            if (rp) *rp++ = *ip++;
+			float i_fade = 1.0;
+			float o_fade = 1.0;
 
-            if (!m_mute)
-            {
-                // add the main input (subject to in-fading)
+			if (fade_in)
+				i_fade = ((float)m_play_block) * FADE_BLOCK_INCREMENT;
+			if (pp_fade)
+				o_fade = ((float)(CROSSFADE_BLOCKS-m_crossfade_offset)) * FADE_BLOCK_INCREMENT;
 
-                if (pp_main)
-                {
-                    float val = *pp_main++;
-                    val = val * m_volume;
-                    if (fade_in)
-                    {
-                        val = val * i_fade;
-                        i_fade += sample_fade;
-                    }
-                    *op += (s16) val;
-               }
+			for (int i=0; i<AUDIO_BLOCK_SAMPLES; i++)
+			{
+				// add the unmodified input data to the recording
 
-                if (pp_fade)
-                {
-                    float val = *pp_fade++;
-                    val = val * m_volume;
-                    val = val * o_fade;
-                    *op += (s16) val;
-                    o_fade -= sample_fade;
-                }
-            }
+				if (rp) *rp++ = *ip++;
 
-            op++;
-        }
-    }
+				if (!m_mute)
+				{
+					// add the main input (subject to in-fading)
 
-    // increment block pointers
-    // handling post increment state changes ....
+					if (pp_main)
+					{
+						float val = *pp_main++;
+						val = val * m_volume;
+						if (fade_in)
+						{
+							val = val * i_fade;
+							i_fade += sample_fade;
+						}
+						*op += (s16) val;
+				   }
 
-    if (rp)
-    {
-        m_record_block++;
+					if (pp_fade)
+					{
+						float val = *pp_fade++;
+						val = val * m_volume;
+						val = val * o_fade;
+						*op += (s16) val;
+						o_fade -= sample_fade;
+					}
+				}
 
-        // if we have recorded all of the FADE_IN, progress
-        // from state RECORD_IN to state RECORD_MAIN
+				op++;
+			}
+		}
 
-        if ((m_state & CLIP_STATE_RECORD_IN) &&
-            (m_record_block >= CROSSFADE_BLOCKS))
-        {
-            m_state &= ~CLIP_STATE_RECORD_IN;
-            m_state |= CLIP_STATE_RECORD_MAIN;
-        }
+		// increment block pointers
+		// handling post increment state changes ....
 
-        // if RECORD_END, and m_record_block has reached the crossfade out,
-        // we change our state (but leave the loop machine to it's own fate)
+		if (rp)
+		{
+			m_record_block++;
 
-        else if ((m_state & CLIP_STATE_RECORD_END) &&
-            m_record_block == m_num_blocks + CROSSFADE_BLOCKS)
-        {
-            _finishRecording();
-        }
-    }
+			// if we have recorded all of the FADE_IN, progress
+			// from state RECORD_IN to state RECORD_MAIN
 
-    if (pp_fade)
-    {
-        m_crossfade_offset++;
-        if (m_crossfade_offset == CROSSFADE_BLOCKS)
-            _endFadeOut();
-    }
-    if (pp_main)
-    {
-        m_play_block++;
-        if (m_play_block == m_num_blocks)
-        {
-            _startCrossFadeOut();
-            // note that this post increment starting of
-            // the next loop can be canceled in the next
-            // updateState() that takes place at the
-            // track change.
-        }
-    }
-}
+			if ((m_state & CLIP_STATE_RECORD_IN) &&
+				(m_record_block >= CROSSFADE_BLOCKS))
+			{
+				m_state &= ~CLIP_STATE_RECORD_IN;
+				m_state |= CLIP_STATE_RECORD_MAIN;
+			}
 
+			// if RECORD_END, and m_record_block has reached the crossfade out,
+			// we change our state (but leave the loop machine to it's own fate)
+
+			else if ((m_state & CLIP_STATE_RECORD_END) &&
+				m_record_block == m_num_blocks + CROSSFADE_BLOCKS)
+			{
+				_finishRecording();
+			}
+		}
+
+		if (pp_fade)
+		{
+			m_crossfade_offset++;
+			if (m_crossfade_offset == CROSSFADE_BLOCKS)
+				_endFadeOut();
+		}
+		if (pp_main)
+		{
+			m_play_block++;
+			if (m_play_block == m_num_blocks)
+			{
+				_startCrossFadeOut();
+				// note that this post increment starting of
+				// the next loop can be canceled in the next
+				// updateState() that takes place at the
+				// track change.
+			}
+		}
+	}
+
+#endif	// USE OLD 16 BIT MIX
 
 
 //----------------------------------------------

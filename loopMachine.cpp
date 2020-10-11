@@ -42,6 +42,12 @@
     #endif
 #endif
 
+#if USE_32BIT_MIX
+	s32 loopMachine::m_input_buffer[ LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES ];
+	s32 loopMachine::m_output_buffer[ LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES ];
+#endif
+
+
 
 
 // The default input gain for the cs42448 of 0db
@@ -522,6 +528,18 @@ void loopMachine::command(u16 command)
 // Update()
 //----------------------------------------------
 
+#if USE_32BIT_MIX
+	inline s16 simple_clip(s32 val32)
+	{
+		if (val32 > S32_MAX)
+			return S32_MAX;
+		if (val32 < S32_MIN)
+			return S32_MIN;
+		return val32;
+	}
+#endif
+
+
 // virtual
 void loopMachine::update(void)
 {
@@ -549,43 +567,40 @@ void loopMachine::update(void)
         #endif
     #endif
 
-    // Set the input buffer and create empty output buffers
+	#if USE_32BIT_MIX
 
-    audio_block_t *in[LOOPER_NUM_CHANNELS];
-    audio_block_t *out[LOOPER_NUM_CHANNELS];
-    for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
-    {
-        in[channel] = receiveReadOnly(channel);
-        out[channel] = AudioSystem::allocate();
-        memset(out[channel]->data,0,AUDIO_BLOCK_BYTES);
+		s32 *poi = m_input_buffer;
+		audio_block_t *out[LOOPER_NUM_CHANNELS];
+		memset(m_output_buffer,0,LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES *sizeof(s32));
 
-        // a preliminary loop through the input buffer
-        // JUST to set the input meter
+		for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+		{
+			audio_block_t *in = receiveReadOnly(channel);
+			s16 *ip = in ? in->data : 0;
+			out[channel] = AudioSystem::allocate();
 
-        #if WITH_METERS
-            s16 *ip = in[channel] ? in[channel]->data : 0;
-            s16 *in_max   = &(m_meter[METER_INPUT].max_sample[channel]  );
-            s16 *in_min   = &(m_meter[METER_INPUT].min_sample[channel]  );
-            for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
-            {
-                s16 val = ip ? *ip++ : 0;
-                if (val > *in_max)
-                    *in_max = val;
-                if (val <*in_min)
-                    *in_min = val;
-            }
-        #endif
+			for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
+			{
+				s16 val = ip ? *ip++ : 0;
 
-    }   // for each channel
+				#if WITH_METERS
+					s16 *in_max   = &(m_meter[METER_INPUT].max_sample[channel]  );
+					s16 *in_min   = &(m_meter[METER_INPUT].min_sample[channel]  );
+						if (val > *in_max)
+							*in_max = val;
+						if (val <*in_min)
+							*in_min = val;
+				#endif
 
-    //-------------------
-    // update the state
-    //-------------------
-    // and if the machine is still running,
-    // call update() on any running tracks
+				*poi++ = val;		// copy to 32 bit input buffer
 
-    if (in[0])
-    {
+			}	// for each sample
+
+			if (in)
+				AudioSystem::release(in);
+
+		}   // for each s32 channel
+
         updateState();
         if (m_running)
         {
@@ -593,94 +608,225 @@ void loopMachine::update(void)
             {
                 loopTrack *pTrack = getTrack(i);
                 if (pTrack->getNumRunningClips())
-                    pTrack->update(in,out);
+				{
+                    pTrack->update(m_input_buffer,m_output_buffer);
+				}
             }
         }   // m_running
 
-    }   // in[0] (audioSystem is started)
+		s32 *iip = m_input_buffer;
+		s32 *iop = m_output_buffer;
+
+		for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+		{
+			s16 *op = out[channel]->data;
+
+			#if WITH_METERS
+				s16 *thru_max   = &(m_meter[METER_THRU].max_sample[channel]);
+				s16 *thru_min   = &(m_meter[METER_THRU].min_sample[channel]);
+				s16 *loop_max   = &(m_meter[METER_LOOP].max_sample[channel]);
+				s16 *loop_min   = &(m_meter[METER_LOOP].min_sample[channel]);
+				s16 *mix_max    = &(m_meter[METER_MIX].max_sample[channel]);
+				s16 *mix_min    = &(m_meter[METER_MIX].min_sample[channel]);
+			#endif
+
+			for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
+			{
+				s32 ival32 = *iip++;
+				s32 oval32 = *iop++;
+
+				// apply Thru and Loop Control volume level
+				// note use of doubles for USE_32BIT_MIX
+
+				#if WITH_VOLUMES
+					#if WITH_INT_VOLUMES
+						applyGain(&ival,thru_mult);			// will not compile
+						applyGain(&oval,loop_mult);
+					#else
+						ival32 = ((double)ival32) * thru_level;
+						oval32 = ((double)oval32) * loop_level;
+					#endif
+				#endif
+
+				// add them to create the Mix value
+				// and apply it's volume if'defd
+
+				s32 mval32 = ival32 + oval32;
+
+				#if WITH_VOLUMES
+					#if WITH_INT_VOLUMES
+						applyGain(&mval,mix_mult);		// will not compile
+				   #else
+						mval32 = ((double)mval32) * mix_level;
+					#endif
+				#endif
+
+				// apply simple clipping
+
+				s16 ival = simple_clip(ival32);
+				s16 oval = simple_clip(oval32);
+				s16 mval = simple_clip(mval32);
+
+				// update the meters in 16 bit-land
+
+				#if WITH_METERS
+					if (ival > *thru_max)
+						*thru_max = ival;
+					if (ival < *thru_min)
+						*thru_min = ival;
+					if (oval > *loop_max)
+						*loop_max = oval;
+					if (oval <*loop_min)
+						*loop_min = oval;
+					if (mval > *mix_max)
+						*mix_max = ival;
+					if (mval <*mix_min)
+						*mix_min = mval;
+				#endif
+
+				// place the 16 bit sample in the output buffer
+
+				*op++ = mval;
+
+			}   // for each input sample
+
+			// transmit the output blocks
+			// and release all blocks
+
+			transmit(out[channel], channel);
+			AudioSystem::release(out[channel]);
+		}
+
+	#else	// USE OLD 16 BIT MIX
+
+		// Set the input buffer and create empty output buffers
+
+		audio_block_t *in[LOOPER_NUM_CHANNELS];
+		audio_block_t *out[LOOPER_NUM_CHANNELS];
+		for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+		{
+			in[channel] = receiveReadOnly(channel);
+			out[channel] = AudioSystem::allocate();
+			memset(out[channel]->data,0,AUDIO_BLOCK_BYTES);
+
+			// a preliminary loop through the input buffer
+			// JUST to set the input meter
+
+			#if WITH_METERS
+				s16 *ip = in[channel] ? in[channel]->data : 0;
+				s16 *in_max   = &(m_meter[METER_INPUT].max_sample[channel]  );
+				s16 *in_min   = &(m_meter[METER_INPUT].min_sample[channel]  );
+				for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
+				{
+					s16 val = ip ? *ip++ : 0;
+					if (val > *in_max)
+						*in_max = val;
+					if (val <*in_min)
+						*in_min = val;
+				}
+			#endif
+
+		}   // for each channel
+
+		//-------------------
+		// update the state
+		//-------------------
+		// and if the machine is still running,
+		// call update() on any running tracks
+
+		if (in[0])
+		{
+			updateState();
+			if (m_running)
+			{
+				for (int i=0; i<LOOPER_NUM_TRACKS; i++)
+				{
+					loopTrack *pTrack = getTrack(i);
+					if (pTrack->getNumRunningClips())
+						pTrack->update(in,out);
+				}
+			}   // m_running
+
+		}   // in[0] (audioSystem is started)
 
 
-    //-----------------------------------------------
-    // final mix of in ==> thru ==> out
-    //-----------------------------------------------
-    // and transmitting and releasing of audio blocks
-    // out[channel] contains combined "loop" values
-    // in[channel] contains the as-yet-unmixed "thru" values
+		for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+		{
+			s16 *ip = in[channel] ? in[channel]->data : 0;
+			s16 *op = out[channel]->data;
 
-    for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
-    {
-        s16 *ip = in[channel] ? in[channel]->data : 0;
-        s16 *op = out[channel]->data;
+			#if WITH_METERS
+				s16 *thru_max   = &(m_meter[METER_THRU].max_sample[channel]);
+				s16 *thru_min   = &(m_meter[METER_THRU].min_sample[channel]);
+				s16 *loop_max   = &(m_meter[METER_LOOP].max_sample[channel]);
+				s16 *loop_min   = &(m_meter[METER_LOOP].min_sample[channel]);
+				s16 *mix_max    = &(m_meter[METER_MIX].max_sample[channel]);
+				s16 *mix_min    = &(m_meter[METER_MIX].min_sample[channel]);
+			#endif
 
-        #if WITH_METERS
-            s16 *thru_max   = &(m_meter[METER_THRU].max_sample[channel]);
-            s16 *thru_min   = &(m_meter[METER_THRU].min_sample[channel]);
-            s16 *loop_max   = &(m_meter[METER_LOOP].max_sample[channel]);
-            s16 *loop_min   = &(m_meter[METER_LOOP].min_sample[channel]);
-            s16 *mix_max    = &(m_meter[METER_MIX].max_sample[channel]);
-            s16 *mix_min    = &(m_meter[METER_MIX].min_sample[channel]);
-        #endif
+			for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
+			{
+				s16 ival = ip ? *ip++ : 0;
+				s16 oval = *op;                 // pointer not incremented
 
-        for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
-        {
-            s16 ival = ip ? *ip++ : 0;
-            s16 oval = *op;                 // pointer not incremented
+				// apply Thru and Loop Control volume level
 
-            // apply Thru and Loop Control volume level
+				#if WITH_VOLUMES
+					#if WITH_INT_VOLUMES
+						applyGain(&ival,thru_mult);
+						applyGain(&oval,loop_mult);
+					#else
+						ival = ((float)ival) * thru_level;
+						oval = ((float)oval) * loop_level;
+					#endif
+				#endif
 
-            #if WITH_VOLUMES
-                #if WITH_INT_VOLUMES
-                    applyGain(&ival,thru_mult);
-                    applyGain(&oval,loop_mult);
-                #else
-                    ival = ((float)ival) * thru_level;
-                    oval = ((float)oval) * loop_level;
-                #endif
-            #endif
+				// add them to create the Mix value
+				// and apply it's volume if'defd
 
-            // add them to create the Mix value
-            // and apply it's volume if'defd
+				s16 mval = ival + oval;
+				#if WITH_VOLUMES
+					#if WITH_INT_VOLUMES
+						applyGain(&mval,mix_mult);
+				   #else
+						mval = ((float)mval) * mix_level;
+					#endif
+				#endif
 
-            s16 mval = ival + oval;
-            #if WITH_VOLUMES
-                #if WITH_INT_VOLUMES
-                    applyGain(&mval,mix_mult);
-               #else
-                    mval = ((float)mval) * mix_level;
-                #endif
-            #endif
+				// update the meters
 
-            // update the meters
+				#if WITH_METERS
+					if (ival > *thru_max)
+						*thru_max = ival;
+					if (ival < *thru_min)
+						*thru_min = ival;
+					if (oval > *loop_max)
+						*loop_max = oval;
+					if (oval <*loop_min)
+						*loop_min = oval;
+					if (mval > *mix_max)
+						*mix_max = ival;
+					if (mval <*mix_min)
+						*mix_min = mval;
+				#endif
 
-            #if WITH_METERS
-                if (ival > *thru_max)
-                    *thru_max = ival;
-                if (ival < *thru_min)
-                    *thru_min = ival;
-                if (oval > *loop_max)
-                    *loop_max = oval;
-                if (oval <*loop_min)
-                    *loop_min = oval;
-                if (mval > *mix_max)
-                    *mix_max = ival;
-                if (mval <*mix_min)
-                    *mix_min = mval;
-            #endif
+				// place the sample in the output buffer
 
-            // place the sample in the output buffer
+				*op++ = mval;
 
-            *op++ = mval;
+			}   // for each input sample
 
-        }   // for each input sample
+			// transmit the output blocks
+			// and release all blocks
 
-        // transmit the output blocks
-        // and release all blocks
+			transmit(out[channel], channel);
+			if (in[channel])
+				AudioSystem::release(in[channel]);
+			AudioSystem::release(out[channel]);
+		}
 
-        transmit(out[channel], channel);
-        if (in[channel])
-            AudioSystem::release(in[channel]);
-        AudioSystem::release(out[channel]);
-    }
+	#endif 	// OLD 16 BIT MIX
+
 
     m_cur_command = 0;
         // end of short lived command variable

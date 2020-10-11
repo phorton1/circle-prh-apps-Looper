@@ -96,7 +96,11 @@ void loopTrack::init()
 }
 
 
-void loopTrack::update(audio_block_t *in[], audio_block_t *out[])
+#if USE_32BIT_MIX
+	void loopTrack::update(s32 *in, s32 *out)
+#else
+	void loopTrack::update(audio_block_t *in[], audio_block_t *out[])
+#endif
 {
     // call update() on all active clips
 

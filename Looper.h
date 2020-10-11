@@ -22,6 +22,13 @@
 
 #define WITH_METERS   1
 
+#define USE_32BIT_MIX     1
+    // will use int32_t buffers for mixing and peak limiting
+#if USE_32BIT_MIX
+    #define S32_MAX      32767
+    #define S32_MIN     -32768
+#endif
+
 #if 1
     #define LOOPER_LOG(f,...)           pTheLoopMachine->LogUpdate(log_name,f,__VA_ARGS__)
 #elif 0
@@ -325,7 +332,12 @@ class loopClip : public publicClip
         // in the update() method ... as updateState() is only
         // called on the current and/or selected tracks()
 
-        void update(audio_block_t *in[], audio_block_t *out[]);
+        #if USE_32BIT_MIX
+            void update(s32 *in, s32 *out);
+        #else
+            void update(audio_block_t *in[], audio_block_t *out[]);
+        #endif
+
         void updateState(u16 cur_command);
         void stopImmediate();
 
@@ -417,7 +429,11 @@ class loopTrack : public publicTrack
             // called before update() if there is a command for the
             // current or selected track to handle. The "previous"
             // track is entirely handled in the update() call chain.
-        void update(audio_block_t *in[], audio_block_t *out[]);
+        #if USE_32BIT_MIX
+            void update(s32 *in, s32 *out);
+        #else
+            void update(audio_block_t *in[], audio_block_t *out[]);
+        #endif
             // called only once for any track on the
             // previous and/or current tracks.
 
@@ -552,6 +568,12 @@ class loopMachine : public publicLoopMachine
         int m_cur_track_num;
 
         loopTrack *m_tracks[LOOPER_NUM_TRACKS];
+
+        #if USE_32BIT_MIX
+            static s32 m_input_buffer[ LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES ];
+            static s32 m_output_buffer[ LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES ];
+        #endif
+
 };
 
 
