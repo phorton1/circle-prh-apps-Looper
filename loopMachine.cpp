@@ -81,10 +81,17 @@ const char *getLoopCommandName(u16 cmd)
     if (cmd == LOOP_COMMAND_STOP_IMMEDIATE)       return "STOP!";
     if (cmd == LOOP_COMMAND_STOP)                 return "STOP";
     if (cmd == LOOP_COMMAND_DUB_MODE)             return "DUB";
+	if (cmd == LOOP_COMMAND_LOOP_IMMEDIATE)		  return "LOOP!";
+	if (cmd == LOOP_COMMAND_SET_LOOP_START)       return "SET_START";
+	if (cmd == LOOP_COMMAND_CLEAR_LOOP_START)     return "CLR_START";
     if (cmd == LOOP_COMMAND_TRACK_BASE+0)         return "TRACK0";
     if (cmd == LOOP_COMMAND_TRACK_BASE+1)         return "TRACK1";
     if (cmd == LOOP_COMMAND_TRACK_BASE+2)         return "TRACK2";
     if (cmd == LOOP_COMMAND_TRACK_BASE+3)         return "TRACK3";
+    if (cmd == LOOP_COMMAND_ERASE_TRACK_BASE+0)   return "ETRK0";
+    if (cmd == LOOP_COMMAND_ERASE_TRACK_BASE+1)   return "ETRK1";
+    if (cmd == LOOP_COMMAND_ERASE_TRACK_BASE+2)   return "ETRK2";
+    if (cmd == LOOP_COMMAND_ERASE_TRACK_BASE+3)   return "ETRK3";
     if (cmd == LOOP_COMMAND_PLAY)                 return "PLAY";
     if (cmd == LOOP_COMMAND_RECORD)               return "REC";
     return "UNKNOWN_LOOP_COMMAND";
@@ -250,6 +257,8 @@ void loopMachine::init()
 
     m_cur_command = 0;
     m_cur_track_num = -1;
+	m_mark_point_state = 0;
+
     pTheLoopBuffer->init();
 
     for (int i=0; i<LOOPER_NUM_TRACKS; i++)
@@ -335,6 +344,44 @@ void loopMachine::command(u16 command)
         m_dub_mode = !m_dub_mode;
         LOOPER_LOG("DUB_MODE=%d",m_dub_mode);
     }
+
+	// recent addtions
+
+    else if (command == LOOP_COMMAND_LOOP_IMMEDIATE)
+    {
+        LOOPER_LOG("LOOP_COMMAND_LOOP_IMMEDIATE()",0);
+    }
+    else if (command == LOOP_COMMAND_SET_LOOP_START)
+    {
+        LOOPER_LOG("LOOP_COMMAND_SET_LOOP_START()",0);
+		if (m_cur_track_num>=0)
+		{
+			if (m_tracks[m_cur_track_num]->getTrackState() & TRACK_STATE_PLAYING)
+			{
+				m_tracks[m_cur_track_num]->setMarkPoint();
+				m_mark_point_state = 1;
+			}
+			else
+			{
+				LOOPER_LOG("ERROR - attempt to setMarkPoint on non-playing track",0);
+			}
+		}
+		else
+		{
+			LOOPER_LOG("ERROR - attempt to setMarkPoint without current track",0);
+		}
+
+    }
+    else if (command == LOOP_COMMAND_CLEAR_LOOP_START)
+    {
+        LOOPER_LOG("LOOP_COMMAND_CLEAR_LOOP_START()",0);
+		m_mark_point_state = 0;
+		if (m_cur_track_num>=0)
+			m_tracks[m_cur_track_num]->clearMarkPoint();
+    }
+
+	// ERASE_TRACKS
+
     else if (command >= LOOP_COMMAND_ERASE_TRACK_BASE &&
              command < LOOP_COMMAND_ERASE_TRACK_BASE + LOOPER_NUM_TRACKS)
     {
@@ -872,7 +919,19 @@ void loopMachine::updateState(void)
 		// the current base clip, and it's state, if any
 	bool at_loop_point = (clip0_state & CLIP_STATE_PLAY_MAIN) && !pClip0->getPlayBlockNum();
 	if (at_loop_point)
+	{
 		m_pending_loop_notify++;
+		if (m_mark_point_state == 1)
+		{
+			m_mark_point_state = 2;
+			LOOPER_LOG("advance m_mark_point_state to 2",0);
+		}
+		if (m_mark_point_state && !m_pending_command)
+		{
+			LOOPER_LOG("forcing m_pending_command=LOOP_COMMAND_SET_LOOP_START",0);
+			m_pending_command = LOOP_COMMAND_SET_LOOP_START;
+		}
+	}
 
     if (m_pending_command)
     {

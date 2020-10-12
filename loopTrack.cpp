@@ -96,6 +96,27 @@ void loopTrack::init()
 }
 
 
+
+
+void loopTrack::clearMarkPoint()
+{
+	LOOPER_LOG("clearMarkPoint()",0);
+	for (int i=0; i<m_num_used_clips; i++)
+	{
+		m_clips[i]->clearMarkPoint();
+	}
+}
+void loopTrack::setMarkPoint()
+{
+	LOOPER_LOG("setMarkPoint()",0);
+	DisableIRQs();	// in synchronize.h
+	for (int i=0; i<m_num_used_clips; i++)
+		m_clips[i]->setMarkPoint();
+	EnableIRQs();	// in synchronize.h
+}
+
+
+
 #if USE_32BIT_MIX
 	void loopTrack::update(s32 *in, s32 *out)
 #else
@@ -146,7 +167,8 @@ void loopTrack::updateState(u16 cur_command)
     LOOPER_LOG("track(%d) updateState(%s)",m_track_num,getLoopCommandName(cur_command));
 
     if (cur_command == LOOP_COMMAND_STOP ||
-        cur_command == LOOP_COMMAND_PLAY)
+        cur_command == LOOP_COMMAND_PLAY ||
+		cur_command == LOOP_COMMAND_SET_LOOP_START)
     {
         for (int i=0; i<m_num_used_clips; i++)
         {

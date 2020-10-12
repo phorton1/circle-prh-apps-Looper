@@ -66,6 +66,23 @@ void loopClip::init()
 }
 
 
+void loopClip::clearMarkPoint()
+{
+	LOOPER_LOG("clip(%d%:%d) clearMarkPoint",m_track_num,m_clip_num);
+	m_mark_point = -1;
+	m_mark_point_active	= false;
+		// becomes active on LOOP_COMMAND_SET_LOOP_START
+}
+
+void loopClip::setMarkPoint()
+	// ONLY IN CLIP_STATE_PLAY_MAIN
+{
+	LOOPER_LOG("clip(%d%:%d) setMarkPoint=%d",m_track_num,m_clip_num,m_play_block);
+	m_mark_point = m_play_block;
+}
+
+
+
 //--------------------------------
 // atomic state changes
 //--------------------------------
@@ -233,15 +250,33 @@ void loopClip::_endFadeOut()
 		s16 *rp = 0;
 		s16 *pp_main = 0;
 		s16 *pp_fade = 0;
+		uint32_t use_play_block = m_play_block;
 
 		if (m_state & (CLIP_STATE_RECORD_IN | CLIP_STATE_RECORD_MAIN | CLIP_STATE_RECORD_END))
 			rp = getBlock(m_record_block);
 		if (m_state & (CLIP_STATE_PLAY_MAIN))
+		{
+			// if the mark point has been activated,
+			// and we have otherwise wrapped to zero,
+			// set the the play block to the mark point
+			// and use that for the fade in too ..
+
+			if (m_mark_point_active)
+			{
+				if (m_play_block == 0)
+				{
+					m_play_block = m_mark_point;
+					LOOPER_LOG("clip(%d:$d) advancing to mark_point(%d) use_play_block=0",m_mark_point);
+				}
+				use_play_block = m_play_block - m_mark_point;
+			}
 			pp_main = getBlock(m_play_block);
+
+		}
 		if (m_state & (CLIP_STATE_PLAY_END))
 			pp_fade = getBlock(m_crossfade_start+m_crossfade_offset);
 
-		bool fade_in = (pp_main && m_play_block < CROSSFADE_BLOCKS) ? 1 : 0;
+		bool fade_in = (pp_main && use_play_block < CROSSFADE_BLOCKS) ? 1 : 0;
 		float sample_fade = FADE_SAMPLE_INCREMENT;
 
 		for (int channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
@@ -250,7 +285,7 @@ void loopClip::_endFadeOut()
 			double o_fade = 1.0;
 
 			if (fade_in)
-				i_fade = ((double)m_play_block) * FADE_BLOCK_INCREMENT;
+				i_fade = ((double)use_play_block) * FADE_BLOCK_INCREMENT;
 			if (pp_fade)
 				o_fade = ((double)(CROSSFADE_BLOCKS-m_crossfade_offset)) * FADE_BLOCK_INCREMENT;
 
@@ -474,7 +509,14 @@ void loopClip::updateState(u16 cur_command)
 {
     LOOPER_LOG("clip(%d,%d) updateState(%s)",m_track_num,m_clip_num,getLoopCommandName(cur_command));
 
-    if (cur_command == LOOP_COMMAND_STOP)
+	if (cur_command == LOOP_COMMAND_SET_LOOP_START)
+	{
+		m_mark_point_active = 1;
+		if (m_play_block)
+        	_startCrossFadeOut();
+	}
+
+    else if (cur_command == LOOP_COMMAND_STOP)
     {
         if (m_state & CLIP_STATE_RECORD_MAIN)
         {

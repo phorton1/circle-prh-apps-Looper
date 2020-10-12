@@ -258,6 +258,8 @@ class publicClip
             m_crossfade_offset = 0;
             m_mute = false;
             m_volume = 1.0;
+            m_mark_point = -1;
+            m_mark_point_active = false;
         }
 
         u16  m_track_num;
@@ -269,6 +271,9 @@ class publicClip
         u32  m_record_block;
         u32  m_crossfade_start;
         u32  m_crossfade_offset;
+
+        s32  m_mark_point;
+        bool m_mark_point_active;
 
         bool m_mute;
 
@@ -340,6 +345,8 @@ class loopClip : public publicClip
 
         void updateState(u16 cur_command);
         void stopImmediate();
+        void setMarkPoint();
+        void clearMarkPoint();
 
 
     private:
@@ -422,6 +429,8 @@ class loopTrack : public publicTrack
 
         void init();                // called to clear the loopMachine
 
+        virtual int getTrackState();
+
         loopClip *getClip(u16 num)  { return m_clips[num]; }
         void setSelected(bool selected)  { m_selected = selected; }
 
@@ -442,14 +451,14 @@ class loopTrack : public publicTrack
         void incDecNumRecordedClips(int inc);
 
         void stopImmediate();
+        void setMarkPoint();
+        void clearMarkPoint();
 
     private:
 
         virtual publicClip *getPublicClip(u16 clip_num) { return (publicClip *) m_clips[clip_num]; }
 
         loopClip *m_clips[LOOPER_NUM_LAYERS];
-
-        virtual int getTrackState();
 
 };
 
@@ -566,6 +575,7 @@ class loopMachine : public publicLoopMachine
 
         u16 m_cur_command;
         int m_cur_track_num;
+        int m_mark_point_state;
 
         loopTrack *m_tracks[LOOPER_NUM_TRACKS];
 
