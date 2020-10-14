@@ -117,14 +117,9 @@ void loopTrack::setMarkPoint()
 
 
 
-#if USE_32BIT_MIX
-	void loopTrack::update(s32 *in, s32 *out)
-#else
-	void loopTrack::update(audio_block_t *in[], audio_block_t *out[])
-#endif
+void loopTrack::update(s32 *in, s32 *out)
 {
     // call update() on all active clips
-
     for (int i=0; i<m_num_used_clips; i++)
         m_clips[i]->update(in,out);
 }
@@ -168,6 +163,7 @@ void loopTrack::updateState(u16 cur_command)
 
     if (cur_command == LOOP_COMMAND_STOP ||
         cur_command == LOOP_COMMAND_PLAY ||
+		cur_command == LOOP_COMMAND_LOOP_IMMEDIATE ||
 		cur_command == LOOP_COMMAND_SET_LOOP_START)
     {
         for (int i=0; i<m_num_used_clips; i++)

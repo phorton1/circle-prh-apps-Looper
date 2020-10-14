@@ -2,24 +2,6 @@
 #include <circle/logger.h>
 #include <circle/synchronize.h>
 
-
-// 2020-09-29 - there are issues with the state machine from real world testing
-//    It fairly often stops or fails to play a track, which suddenly appears to
-//    have no content?   Other times, all tracks started playing at once.
-//    I fear this is time to dig into the state machine
-//
-// THINGS TO DO
-//
-//   1. rock solid state machine ... NO COMMANDS DURING fade in or fade out ...
-
-//   2. TE: get rid of "quick mode" ... make it a full blown mode (turn off other leds)
-//   3. TE: Turn clip controls "sideways" and move to top row (allowing for four clips + erase buttons)
-//   4. TE & LOOPER: add Erase Track controls.   If you Erase the track that is currently playing
-//      it stops the looper.
-//
-//   5. Bump number of clips to 4
-
-
 #define log_name "lmachine"
 
 #define WITH_VOLUMES       1
@@ -42,14 +24,6 @@
     #endif
 #endif
 
-#if USE_32BIT_MIX
-	s32 loopMachine::m_input_buffer[ LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES ];
-	s32 loopMachine::m_output_buffer[ LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES ];
-#endif
-
-
-
-
 // The default input gain for the cs42448 of 0db
 // 0.723 = (128.0 / (128.0 + 1.0 + 48.0))
 // 91.84 =  0.723 * 127
@@ -67,6 +41,12 @@ u16 control_default[LOOPER_NUM_CONTROLS] = {
     63,     // loop
     63,     // mix
     127};    // codec output defaults to 1.0
+
+
+// 32 bit buffers for processing
+
+s32 loopMachine::m_input_buffer[ LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES ];
+s32 loopMachine::m_output_buffer[ LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES ];
 
 
 //-------------------------------------------
@@ -349,6 +329,7 @@ void loopMachine::command(u16 command)
 
     else if (command == LOOP_COMMAND_LOOP_IMMEDIATE)
     {
+        m_pending_command = command;
         LOOPER_LOG("LOOP_COMMAND_LOOP_IMMEDIATE()",0);
     }
     else if (command == LOOP_COMMAND_SET_LOOP_START)
@@ -575,16 +556,14 @@ void loopMachine::command(u16 command)
 // Update()
 //----------------------------------------------
 
-#if USE_32BIT_MIX
-	inline s16 simple_clip(s32 val32)
-	{
-		if (val32 > S32_MAX)
-			return S32_MAX;
-		if (val32 < S32_MIN)
-			return S32_MIN;
-		return val32;
-	}
-#endif
+inline s16 simple_clip(s32 val32)
+{
+	if (val32 > S32_MAX)
+		return S32_MAX;
+	if (val32 < S32_MIN)
+		return S32_MIN;
+	return val32;
+}
 
 
 // virtual
@@ -614,266 +593,133 @@ void loopMachine::update(void)
         #endif
     #endif
 
-	#if USE_32BIT_MIX
+	s32 *poi = m_input_buffer;
+	audio_block_t *out[LOOPER_NUM_CHANNELS];
+	memset(m_output_buffer,0,LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES *sizeof(s32));
 
-		s32 *poi = m_input_buffer;
-		audio_block_t *out[LOOPER_NUM_CHANNELS];
-		memset(m_output_buffer,0,LOOPER_NUM_CHANNELS * AUDIO_BLOCK_SAMPLES *sizeof(s32));
+	for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+	{
+		audio_block_t *in = receiveReadOnly(channel);
+		s16 *ip = in ? in->data : 0;
+		out[channel] = AudioSystem::allocate();
 
-		for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+		for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
 		{
-			audio_block_t *in = receiveReadOnly(channel);
-			s16 *ip = in ? in->data : 0;
-			out[channel] = AudioSystem::allocate();
-
-			for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
-			{
-				s16 val = ip ? *ip++ : 0;
-
-				#if WITH_METERS
-					s16 *in_max   = &(m_meter[METER_INPUT].max_sample[channel]  );
-					s16 *in_min   = &(m_meter[METER_INPUT].min_sample[channel]  );
-						if (val > *in_max)
-							*in_max = val;
-						if (val <*in_min)
-							*in_min = val;
-				#endif
-
-				*poi++ = val;		// copy to 32 bit input buffer
-
-			}	// for each sample
-
-			if (in)
-				AudioSystem::release(in);
-
-		}   // for each s32 channel
-
-        updateState();
-        if (m_running)
-        {
-            for (int i=0; i<LOOPER_NUM_TRACKS; i++)
-            {
-                loopTrack *pTrack = getTrack(i);
-                if (pTrack->getNumRunningClips())
-				{
-                    pTrack->update(m_input_buffer,m_output_buffer);
-				}
-            }
-        }   // m_running
-
-		s32 *iip = m_input_buffer;
-		s32 *iop = m_output_buffer;
-
-		for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
-		{
-			s16 *op = out[channel]->data;
+			s16 val = ip ? *ip++ : 0;
 
 			#if WITH_METERS
-				s16 *thru_max   = &(m_meter[METER_THRU].max_sample[channel]);
-				s16 *thru_min   = &(m_meter[METER_THRU].min_sample[channel]);
-				s16 *loop_max   = &(m_meter[METER_LOOP].max_sample[channel]);
-				s16 *loop_min   = &(m_meter[METER_LOOP].min_sample[channel]);
-				s16 *mix_max    = &(m_meter[METER_MIX].max_sample[channel]);
-				s16 *mix_min    = &(m_meter[METER_MIX].min_sample[channel]);
-			#endif
-
-			for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
-			{
-				s32 ival32 = *iip++;
-				s32 oval32 = *iop++;
-
-				// apply Thru and Loop Control volume level
-				// note use of doubles for USE_32BIT_MIX
-
-				#if WITH_VOLUMES
-					#if WITH_INT_VOLUMES
-						applyGain(&ival,thru_mult);			// will not compile
-						applyGain(&oval,loop_mult);
-					#else
-						ival32 = ((double)ival32) * thru_level;
-						oval32 = ((double)oval32) * loop_level;
-					#endif
-				#endif
-
-				// add them to create the Mix value
-				// and apply it's volume if'defd
-
-				s32 mval32 = ival32 + oval32;
-
-				#if WITH_VOLUMES
-					#if WITH_INT_VOLUMES
-						applyGain(&mval,mix_mult);		// will not compile
-				   #else
-						mval32 = ((double)mval32) * mix_level;
-					#endif
-				#endif
-
-				// apply simple clipping
-
-				s16 ival = simple_clip(ival32);
-				s16 oval = simple_clip(oval32);
-				s16 mval = simple_clip(mval32);
-
-				// update the meters in 16 bit-land
-
-				#if WITH_METERS
-					if (ival > *thru_max)
-						*thru_max = ival;
-					if (ival < *thru_min)
-						*thru_min = ival;
-					if (oval > *loop_max)
-						*loop_max = oval;
-					if (oval <*loop_min)
-						*loop_min = oval;
-					if (mval > *mix_max)
-						*mix_max = ival;
-					if (mval <*mix_min)
-						*mix_min = mval;
-				#endif
-
-				// place the 16 bit sample in the output buffer
-
-				*op++ = mval;
-
-			}   // for each input sample
-
-			// transmit the output blocks
-			// and release all blocks
-
-			transmit(out[channel], channel);
-			AudioSystem::release(out[channel]);
-		}
-
-	#else	// USE OLD 16 BIT MIX
-
-		// Set the input buffer and create empty output buffers
-
-		audio_block_t *in[LOOPER_NUM_CHANNELS];
-		audio_block_t *out[LOOPER_NUM_CHANNELS];
-		for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
-		{
-			in[channel] = receiveReadOnly(channel);
-			out[channel] = AudioSystem::allocate();
-			memset(out[channel]->data,0,AUDIO_BLOCK_BYTES);
-
-			// a preliminary loop through the input buffer
-			// JUST to set the input meter
-
-			#if WITH_METERS
-				s16 *ip = in[channel] ? in[channel]->data : 0;
 				s16 *in_max   = &(m_meter[METER_INPUT].max_sample[channel]  );
 				s16 *in_min   = &(m_meter[METER_INPUT].min_sample[channel]  );
-				for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
-				{
-					s16 val = ip ? *ip++ : 0;
 					if (val > *in_max)
 						*in_max = val;
 					if (val <*in_min)
 						*in_min = val;
-				}
 			#endif
 
-		}   // for each channel
+			*poi++ = val;		// copy to 32 bit input buffer
 
-		//-------------------
-		// update the state
-		//-------------------
-		// and if the machine is still running,
-		// call update() on any running tracks
+		}	// for each sample
 
-		if (in[0])
+		if (in)
+			AudioSystem::release(in);
+
+	}   // for each s32 channel
+
+	updateState();
+	if (m_running)
+	{
+		for (int i=0; i<LOOPER_NUM_TRACKS; i++)
 		{
-			updateState();
-			if (m_running)
+			loopTrack *pTrack = getTrack(i);
+			if (pTrack->getNumRunningClips())
 			{
-				for (int i=0; i<LOOPER_NUM_TRACKS; i++)
-				{
-					loopTrack *pTrack = getTrack(i);
-					if (pTrack->getNumRunningClips())
-						pTrack->update(in,out);
-				}
-			}   // m_running
+				pTrack->update(m_input_buffer,m_output_buffer);
+			}
+		}
+	}   // m_running
 
-		}   // in[0] (audioSystem is started)
+	s32 *iip = m_input_buffer;
+	s32 *iop = m_output_buffer;
 
+	for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+	{
+		s16 *op = out[channel]->data;
 
-		for (u16 channel=0; channel<LOOPER_NUM_CHANNELS; channel++)
+		#if WITH_METERS
+			s16 *thru_max   = &(m_meter[METER_THRU].max_sample[channel]);
+			s16 *thru_min   = &(m_meter[METER_THRU].min_sample[channel]);
+			s16 *loop_max   = &(m_meter[METER_LOOP].max_sample[channel]);
+			s16 *loop_min   = &(m_meter[METER_LOOP].min_sample[channel]);
+			s16 *mix_max    = &(m_meter[METER_MIX].max_sample[channel]);
+			s16 *mix_min    = &(m_meter[METER_MIX].min_sample[channel]);
+		#endif
+
+		for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
 		{
-			s16 *ip = in[channel] ? in[channel]->data : 0;
-			s16 *op = out[channel]->data;
+			s32 ival32 = *iip++;
+			s32 oval32 = *iop++;
+
+			// apply Thru and Loop Control volume level
+			// note use of doubles for USE_32BIT_MIX
+
+			#if WITH_VOLUMES
+				#if WITH_INT_VOLUMES
+					applyGain(&ival,thru_mult);			// will not compile
+					applyGain(&oval,loop_mult);
+				#else
+					ival32 = ((double)ival32) * thru_level;
+					oval32 = ((double)oval32) * loop_level;
+				#endif
+			#endif
+
+			// add them to create the Mix value
+			// and apply it's volume if'defd
+
+			s32 mval32 = ival32 + oval32;
+
+			#if WITH_VOLUMES
+				#if WITH_INT_VOLUMES
+					applyGain(&mval,mix_mult);		// will not compile
+			   #else
+					mval32 = ((double)mval32) * mix_level;
+				#endif
+			#endif
+
+			// apply simple clipping
+
+			s16 ival = simple_clip(ival32);
+			s16 oval = simple_clip(oval32);
+			s16 mval = simple_clip(mval32);
+
+			// update the meters in 16 bit-land
 
 			#if WITH_METERS
-				s16 *thru_max   = &(m_meter[METER_THRU].max_sample[channel]);
-				s16 *thru_min   = &(m_meter[METER_THRU].min_sample[channel]);
-				s16 *loop_max   = &(m_meter[METER_LOOP].max_sample[channel]);
-				s16 *loop_min   = &(m_meter[METER_LOOP].min_sample[channel]);
-				s16 *mix_max    = &(m_meter[METER_MIX].max_sample[channel]);
-				s16 *mix_min    = &(m_meter[METER_MIX].min_sample[channel]);
+				if (ival > *thru_max)
+					*thru_max = ival;
+				if (ival < *thru_min)
+					*thru_min = ival;
+				if (oval > *loop_max)
+					*loop_max = oval;
+				if (oval <*loop_min)
+					*loop_min = oval;
+				if (mval > *mix_max)
+					*mix_max = ival;
+				if (mval <*mix_min)
+					*mix_min = mval;
 			#endif
 
-			for (u16 i=0; i<AUDIO_BLOCK_SAMPLES; i++)
-			{
-				s16 ival = ip ? *ip++ : 0;
-				s16 oval = *op;                 // pointer not incremented
+			// place the 16 bit sample in the output buffer
 
-				// apply Thru and Loop Control volume level
+			*op++ = mval;
 
-				#if WITH_VOLUMES
-					#if WITH_INT_VOLUMES
-						applyGain(&ival,thru_mult);
-						applyGain(&oval,loop_mult);
-					#else
-						ival = ((float)ival) * thru_level;
-						oval = ((float)oval) * loop_level;
-					#endif
-				#endif
+		}   // for each input sample
 
-				// add them to create the Mix value
-				// and apply it's volume if'defd
+		// transmit the output blocks
+		// and release all blocks
 
-				s16 mval = ival + oval;
-				#if WITH_VOLUMES
-					#if WITH_INT_VOLUMES
-						applyGain(&mval,mix_mult);
-				   #else
-						mval = ((float)mval) * mix_level;
-					#endif
-				#endif
-
-				// update the meters
-
-				#if WITH_METERS
-					if (ival > *thru_max)
-						*thru_max = ival;
-					if (ival < *thru_min)
-						*thru_min = ival;
-					if (oval > *loop_max)
-						*loop_max = oval;
-					if (oval <*loop_min)
-						*loop_min = oval;
-					if (mval > *mix_max)
-						*mix_max = ival;
-					if (mval <*mix_min)
-						*mix_min = mval;
-				#endif
-
-				// place the sample in the output buffer
-
-				*op++ = mval;
-
-			}   // for each input sample
-
-			// transmit the output blocks
-			// and release all blocks
-
-			transmit(out[channel], channel);
-			if (in[channel])
-				AudioSystem::release(in[channel]);
-			AudioSystem::release(out[channel]);
-		}
-
-	#endif 	// OLD 16 BIT MIX
-
+		transmit(out[channel], channel);
+		AudioSystem::release(out[channel]);
+	}
 
     m_cur_command = 0;
         // end of short lived command variable
@@ -939,7 +785,8 @@ void loopMachine::updateState(void)
             !m_running ||
             at_loop_point ||
             !clip0_state ||
-            (clip0_state & CLIP_STATE_RECORD_MAIN);
+            (clip0_state & CLIP_STATE_RECORD_MAIN) ||
+			m_pending_command == LOOP_COMMAND_LOOP_IMMEDIATE;
 
         // LATCH IN A NEW COMMAND
 
@@ -957,7 +804,10 @@ void loopMachine::updateState(void)
             // and start the new one with the given command
 
             if (pCurTrack && pCurTrack != pSelTrack)
+			{
                 pCurTrack->updateState(LOOP_COMMAND_STOP);
+				pCurTrack->clearMarkPoint();
+			}
             pSelTrack->updateState(m_cur_command);
 
             // change the current track to the selected track
