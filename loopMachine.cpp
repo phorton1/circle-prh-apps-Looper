@@ -60,6 +60,7 @@ const char *getLoopCommandName(u16 cmd)
     if (cmd == LOOP_COMMAND_CLEAR_ALL)            return "CLEAR";
     if (cmd == LOOP_COMMAND_STOP_IMMEDIATE)       return "STOP!";
     if (cmd == LOOP_COMMAND_STOP)                 return "STOP";
+    if (cmd == LOOP_COMMAND_ABORT_RECORDING)      return "ABORT";
     if (cmd == LOOP_COMMAND_DUB_MODE)             return "DUB";
 	if (cmd == LOOP_COMMAND_LOOP_IMMEDIATE)		  return "LOOP!";
 	if (cmd == LOOP_COMMAND_SET_LOOP_START)       return "SET_START";
@@ -306,6 +307,8 @@ void loopMachine::command(u16 command)
 
     if (command == LOOP_COMMAND_STOP_IMMEDIATE)
     {
+        LOOPER_LOG("LOOP_COMMAND_STOP_IMMEDIATE",0);
+
         for (int i=0; i<LOOPER_NUM_TRACKS; i++)
             getTrack(i)->stopImmediate();
 
@@ -314,6 +317,20 @@ void loopMachine::command(u16 command)
         m_selected_track_num = -1;
         m_pending_command = 0;
     }
+    else if (command == LOOP_COMMAND_ABORT_RECORDING)
+    {
+        LOOPER_LOG("LOOP_COMMAND_ABORT_RECORDING m_cur_track_num=%d",m_cur_track_num);
+		if (m_cur_track_num >= 0)
+		{
+			loopTrack *pCurTrack = getTrack(m_cur_track_num);
+			if (pCurTrack->getTrackState() & TRACK_STATE_RECORDING)
+			{
+				loopClip *pClip = pCurTrack->getClip(pCurTrack->getNumRecordedClips());
+				pClip->stopImmediate();
+			}
+		}
+    }
+
     else if (command == LOOP_COMMAND_CLEAR_ALL)
     {
         LOOPER_LOG("LOOP_COMMAND_CLEAR",0);
@@ -321,16 +338,16 @@ void loopMachine::command(u16 command)
     }
     else if (command == LOOP_COMMAND_DUB_MODE)
     {
-        m_dub_mode = !m_dub_mode;
         LOOPER_LOG("DUB_MODE=%d",m_dub_mode);
+        m_dub_mode = !m_dub_mode;
     }
 
 	// recent addtions
 
     else if (command == LOOP_COMMAND_LOOP_IMMEDIATE)
     {
-        m_pending_command = command;
         LOOPER_LOG("LOOP_COMMAND_LOOP_IMMEDIATE()",0);
+        m_pending_command = command;
     }
     else if (command == LOOP_COMMAND_SET_LOOP_START)
     {
@@ -390,8 +407,8 @@ void loopMachine::command(u16 command)
 
     else if (command == LOOP_COMMAND_STOP)
     {
-        m_pending_command = command;
         LOOPER_LOG("PENDING_STOP_COMMAND(%s)",getLoopCommandName(m_pending_command));
+        m_pending_command = command;
     }
 
     // we are going to use the same "selected track" mechanism
@@ -514,17 +531,6 @@ void loopMachine::command(u16 command)
                     pCurTrack->setSelected(true);
                 }
             }
-
-
-            /*
-                    pending_command = LOOP_COMMAND_PLAY;
-                else if (pending_command == LOOP_COMMAND_PLAY)
-                    pending_command = LOOP_COMMAND_STOP;
-                else if (pending_command == LOOP_COMMAND_STOP)
-                    pending_command = LOOP_COMMAND_RECORD;          // may want this to be "NONE"
-                else if (pending_command == LOOP_COMMAND_RECORD)    // and to get rid of this state
-                    pending_command = LOOP_COMMAND_NONE;
-            */
         }
         else    // changed tracks, so it's just like all the others
         {

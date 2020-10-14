@@ -99,10 +99,14 @@ void loopClip::stopImmediate()
     {
         LOOPER_LOG("clip(%d,%d)::stopImmediate(WhileRecording)",m_track_num,m_clip_num);
 
-        // the track was 'used' by virtue of being recorded
+		m_pLoopTrack->incDecRunning(-1);
+
+		// the track was 'used' by virtue of being recorded
+
         m_pLoopTrack->incDecNumUsedClips(-1);
 
         // and we even 'unrecord' it if it happens to be in that RECORD_END window
+
         if (m_state & CLIP_STATE_RECORD_END)
             m_pLoopTrack->incDecNumRecordedClips(-1);
 
@@ -111,6 +115,13 @@ void loopClip::stopImmediate()
     else
     {
         LOOPER_LOG("clip(%d,%d)::stopImmediate()",m_track_num,m_clip_num);
+
+		// decrement running count up to two times
+
+		if (m_state & CLIP_STATE_PLAY_MAIN)
+			m_pLoopTrack->incDecRunning(-1);
+		if (m_state & CLIP_STATE_PLAY_END)
+			m_pLoopTrack->incDecRunning(-1);
 
         m_play_block = 0;
         m_crossfade_start = 0;
@@ -183,7 +194,7 @@ void loopClip::_startPlaying()
 
 
 
-void loopClip::_startCrossFadeOut()
+void loopClip::_startCrossFade()
     // start a fade out and DO start playing the next time through
 {
     LOOPER_LOG("clip(%d,%d)::startCrossFade",m_track_num,m_clip_num);
@@ -208,8 +219,7 @@ void loopClip::_startFadeOut()
 {
     LOOPER_LOG("clip(%d,%d)::_startFadeOut",m_track_num,m_clip_num);
 
-    if (m_play_block)   // &&
-        // !(m_state & CLIP_STATE_PLAY_END))
+    if (m_play_block)
         m_crossfade_start = m_play_block;
 
     m_state &= ~CLIP_STATE_PLAY_MAIN;
@@ -364,7 +374,7 @@ void loopClip::update(s32 *ip, s32 *op)
 		m_play_block++;
 		if (m_play_block == m_num_blocks)
 		{
-			_startCrossFadeOut();
+			_startCrossFade();
 			// note that this post increment starting of
 			// the next loop can be canceled in the next
 			// updateState() that takes place at the
@@ -389,22 +399,21 @@ void loopClip::updateState(u16 cur_command)
 
         if (m_state & (CLIP_STATE_RECORD_IN | CLIP_STATE_RECORD_MAIN | CLIP_STATE_RECORD_END))
         {
-            _startEndingRecording();
-		    m_pLoopTrack->incDecRunning(-1);
+            stopImmediate();
         }
 
 		// otherwise we start the fade out now
 
-		else
+		else if (m_play_block)
 		{
-			_startCrossFadeOut();
+			_startCrossFade();
 		}
 	}
 	else if (cur_command == LOOP_COMMAND_SET_LOOP_START)
 	{
 		m_mark_point_active = 1;
 		if (m_play_block)
-        	_startCrossFadeOut();
+        	_startCrossFade();
 	}
     else if (cur_command == LOOP_COMMAND_STOP)
     {
@@ -414,7 +423,10 @@ void loopClip::updateState(u16 cur_command)
         }
         else if (m_state & CLIP_STATE_PLAY_MAIN)
         {
-            _startFadeOut();
+			if (m_play_block)
+				_startFadeOut();
+			else
+				stopImmediate();
         }
     }
     else if (cur_command == LOOP_COMMAND_PLAY)

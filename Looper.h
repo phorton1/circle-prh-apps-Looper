@@ -354,7 +354,7 @@ class loopClip : public publicClip
 
         void _startPlaying();
         void _startFadeOut();
-        void _startCrossFadeOut();
+        void _startCrossFade();
         void _endFadeOut();
 };
 

@@ -102,9 +102,13 @@ void uiTrack::updateFrame()
 	// if the track state has changed,
 	// send a track state change message to the TE
 
+	bool track_changed = 0;
 	int track_state = pTrack->getTrackState();
 	if (track_state != m_last_te_track_state)
 	{
+		m_last_te_track_state = track_state;
+		track_changed = 1;
+
 		#if 1
 			CString *ts_name = getTrackStateName(track_state);
 			LOG("track(%d) state changed to 0x%04x - %s",m_track_num,track_state,(const char *)*ts_name);
@@ -118,7 +122,6 @@ void uiTrack::updateFrame()
 		// the value is the state, which is 0..0x2f
 
 		sendSerialMidiCC(TRACK_STATE_BASE_CC + m_track_num,track_state & 0xff);
-		m_last_te_track_state = track_state;
 
 		m_pUIWindow->enableEraseButton(m_track_num,track_state);
 
@@ -129,7 +132,8 @@ void uiTrack::updateFrame()
 	u16  rec = pTrack->getNumRecordedClips();
 	u16  running = pTrack->getNumRunningClips();
 
-	if (sel != m_selected ||
+	if (track_changed ||
+		sel != m_selected ||
 		used != m_num_used ||
 		running != m_num_running ||
 		rec != m_num_recorded)
