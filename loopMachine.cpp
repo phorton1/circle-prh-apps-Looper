@@ -427,7 +427,7 @@ void loopMachine::command(u16 command)
         if (track_num != m_selected_track_num)
         {
             track_changed = true;
-            LOOPER_LOG("--> selected track changed from (%d)",m_selected_track_num);
+            LOOPER_LOG("--> selected track changing from (%d) to %d",m_selected_track_num,track_num);
             if (m_selected_track_num != -1)
                 m_tracks[m_selected_track_num]->setSelected(false);
             m_selected_track_num = track_num;
@@ -742,13 +742,13 @@ void loopMachine::update(void)
 void loopMachine::incDecRunning(int inc)
 {
     m_running += inc;
+    LOOPER_LOG("incDecRunning(%d) m_running=%d",inc,m_running);
     if (m_selected_track_num >=0 && !m_running)
     {
+	    LOOPER_LOG("incDecRunning DESELECTING TRACK(%d)",m_selected_track_num);
         m_tracks[m_selected_track_num]->setSelected(false);
         m_selected_track_num = -1;
-
     }
-    LOOPER_LOG("incDecRunning(%d) m_running=%d",inc,m_running);
 }
 
 
@@ -766,10 +766,16 @@ void loopMachine::updateState(void)
     // the current command ...
 
 	loopTrack *pCurTrack = m_cur_track_num >= 0 ?  getTrack(m_cur_track_num) : 0;
-	loopClip  *pClip0 = pCurTrack ? pCurTrack->getClip(0) : 0;
-	u16 clip0_state = pClip0 ? pClip0->getClipState() : 0;
+	loopClip  *pCurClip0 = pCurTrack ? pCurTrack->getClip(0) : 0;
+	u16 cur_clip0_state = pCurClip0 ? pCurClip0->getClipState() : 0;
+
+	loopTrack *pSelTrack = m_selected_track_num >=0 ? getTrack(m_selected_track_num) : 0;
+	// loopClip  *pSelClip0 = pSelTrack ? pSelTrack->getClip(0) : 0;
+	// u16 sel_clip0_state = pSelClip0 ? pSelClip0->getClipState() : 0;
+
 		// the current base clip, and it's state, if any
-	bool at_loop_point = (clip0_state & CLIP_STATE_PLAY_MAIN) && !pClip0->getPlayBlockNum();
+	bool at_loop_point = (cur_clip0_state & CLIP_STATE_PLAY_MAIN) && !pCurClip0->getPlayBlockNum();
+
 	if (at_loop_point)
 	{
 		m_pending_loop_notify++;
@@ -790,24 +796,29 @@ void loopMachine::updateState(void)
         bool latch_command =
             !m_running ||
             at_loop_point ||
-            !clip0_state ||
-            (clip0_state & CLIP_STATE_RECORD_MAIN) ||
+            // !sel_clip0_state ||
+            (cur_clip0_state & CLIP_STATE_RECORD_MAIN) ||
 			m_pending_command == LOOP_COMMAND_LOOP_IMMEDIATE;
 
         // LATCH IN A NEW COMMAND
 
         if (latch_command)
         {
-			loopTrack *pSelTrack = getTrack(m_selected_track_num);
-
             m_cur_command = m_pending_command;
             m_pending_command = 0;
 
-            LOOPER_LOG("latching pending command(%s)",getLoopCommandName(m_cur_command));
+            LOOPER_LOG("latching pending command(%s) m_running(%d) at_loop_point(%d) cur_clip0_state(0x%02x)",
+				getLoopCommandName(m_cur_command),
+				m_running,
+				at_loop_point,
+				cur_clip0_state);
 
             // the previous track is entirely handled in update().
             // if we are changing tracks(), STOP the old track ...
             // and start the new one with the given command
+
+			if (!pSelTrack)
+				LOOPER_LOG("PENDING COMMAND %d WITHOUT SELECTED TRACK!!!",m_cur_command);
 
             if (pCurTrack && pCurTrack != pSelTrack)
 			{
