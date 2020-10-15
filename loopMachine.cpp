@@ -357,7 +357,7 @@ void loopMachine::command(u16 command)
 			if (m_tracks[m_cur_track_num]->getTrackState() & TRACK_STATE_PLAYING)
 			{
 				m_tracks[m_cur_track_num]->setMarkPoint();
-				m_mark_point_state = 1;
+				m_mark_point_state = 1;		// not in effect yet
 			}
 			else
 			{
@@ -779,15 +779,16 @@ void loopMachine::updateState(void)
 	if (at_loop_point)
 	{
 		m_pending_loop_notify++;
-		if (m_mark_point_state == 1)
-		{
-			m_mark_point_state = 2;
-			LOOPER_LOG("advance m_mark_point_state to 2",0);
-		}
+		// if (m_mark_point_state == 1)	// was waiting to come into effect for this loop point
+		// {
+		// 	m_mark_point_state = 2;
+		// 	LOOPER_LOG("advance m_mark_point_state to 2",0);
+		// }
 		if (m_mark_point_state && !m_pending_command)
 		{
 			LOOPER_LOG("forcing m_pending_command=LOOP_COMMAND_SET_LOOP_START",0);
 			m_pending_command = LOOP_COMMAND_SET_LOOP_START;
+				// over used as command "ACTUALLY JUMP TO THE MARK POINT"
 		}
 	}
 
@@ -824,6 +825,7 @@ void loopMachine::updateState(void)
 			{
                 pCurTrack->updateState(LOOP_COMMAND_STOP);
 				pCurTrack->clearMarkPoint();
+				m_mark_point_state = 0;
 			}
             pSelTrack->updateState(m_cur_command);
 

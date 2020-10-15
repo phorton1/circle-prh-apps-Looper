@@ -301,7 +301,7 @@ void loopClip::update(s32 *ip, s32 *op)
 			if (m_play_block == 0)
 			{
 				m_play_block = m_mark_point;
-				LOOPER_LOG("clip(%d:$d) advancing to mark_point(%d) use_play_block=0",m_mark_point);
+				LOOPER_LOG("clip(%d:%d) advancing to mark_point(%d) use_play_block=0",m_mark_point);
 			}
 			use_play_block = m_play_block - m_mark_point;
 		}
