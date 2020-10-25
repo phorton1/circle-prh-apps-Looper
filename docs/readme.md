@@ -43,9 +43,7 @@ with a user interface (foot pedal) that I like, and that can be somewhat easily 
 and programmed.
 
 Above is a photo of the first 3D printed version of the Looper.  There have
-been several phsyical iterations of the "box".  The 3D printing information
-(fusion, STL files, etc) can be within the **["documentation"](docs/readme.md)**
-folder.
+been several phsyical iterations of the "box".
 
 **-----------------------------------------------------------------------------**
 
