@@ -66,7 +66,7 @@ Sorry! It's not my fault!
 I will generally, in this discussion, use the term *Looper* to loosely refer to the
 program, the software, in **this** repository.
 
-In detailed discussions it will
+In detailed discussions the word
 also may occasionally be used synonymously with  a specific **part of *this
 software*** ... the *"loopMachine"* as defined in the **Looper.h** and **loopMachine cpp**
 files, is sometimes referred to as *"the Looper"* in discusions and/or source
@@ -99,9 +99,9 @@ used in/with both of them.
   The *Looper* consists of four **tracks** that can record and play sequentially, each
   with four *layers* of **clips**, that can play simultaneously at any given time.
 
-  **TODO - Diagram of Tracks, Layers, and Clips**
+[![TracksClipsAndLayers](images/TracksClipsAndLayers_resized.jpg)](images/TracksClipsAndLayers.jpg)
 
-  This conceptual arrangement of *tracks, layers, and clips* applies not only to this
+  This conceptual arrangement of *tracks, clips, and layers* applies not only to this
   program, and it's user interface, protocols and communication, and implementation,
   but also to my other closely related project, the
   *[teensyExpression Pedal](https://github.com/phorton1/Arduino-teensyExpression)*,
