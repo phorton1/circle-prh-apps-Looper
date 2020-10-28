@@ -9,13 +9,11 @@
 **[Looper1](looper1.md)** --
 **[Looper2](looper2.md)**
 
-(this section, to the dashed line, is repeated from main readme file)
-
 This repository contains the source code and other information required to
 build a bare metal rPi based Audio Looper.
 
 [![Looper1-openAndRunning](images/Looper1-openAndRunning_resized.jpg)](images/Looper1-openAndRunning.jpg)
-Looper1
+Looper1 *running an earlier version* of the program.
 
 This project brings together what, until now, have been multiple disparate parts of the puzzle,
 and is a milestone in my **[rPi bare metal vGuitar rig](https://hackaday.io/project/165696-rpi-bare-metal-vguitar-rig)**
@@ -24,16 +22,16 @@ hackaday project.
 It is based on my prior projects (repositories) which include my fork of the
 **[circle](https://github.com/phorton1/circle)** rPi bare metal C++ framework,
 and my extensions to it, including a port of the Teensy Audio library to
-rPi bare metal in my **[circle-prh](https://github.com/phorton1/circle-prh)** project.
+rPi bare metal, in my **[circle-prh](https://github.com/phorton1/circle-prh)** repository.
 
 The box (my bare metal rPi development environment) also has a Teensy 3.2 board
 in it (for serial communications with, and control of, the rPi).  So the
-box ALSO includes the **[teensyPiLooper](https://github.com/phorton1/Arduino-teensyPiLooper)**
-repository which contains the INO program that runs on the Teensy 3.2 that communicates
-with, and controls, the rPi, as well as commmunicating with my
+**box** ALSO includes the **[teensyPiLooper](https://github.com/phorton1/Arduino-teensyPiLooper)**
+*INO program* which runs on the Teensy 3.2 in it's own repository.
+The teensy communicates with, and controls, the rPi, as well as commmunicating with my
 3D printed teensy 3.6 MIDI controller pedal, the
-**[teensyExpression Pedal](https://github.com/phorton1/Arduino-teensyExpression)**,
-also via serial data.
+**[teensyExpression Pedal](https://github.com/phorton1/Arduino-teensyExpression)**
+via serial data.
 
 Together these projects, along with a **Fishman Triple Play** pickup and an **iPad**
 running *Tonestack* and *SampleTank* inside of *AudioBus*, form an **actual working rig**.
@@ -43,9 +41,66 @@ with a user interface (foot pedal) that I like, and that can be somewhat easily 
 and programmed.
 
 Above is a photo of the first 3D printed version of the Looper.  There have
-been several phsyical iterations of the "box".
+been several phsyical iterations of the *box* and the *software continues to
+be developed*.
 
-**-----------------------------------------------------------------------------**
+
+
+## Organization of Documentation
+
+This *readme* presents some basic concepts and a glossary.  The bulk of
+the information about the *Looper* is found in the following separate
+readme files:
+
+- **[Hardware](hardware.md)** - Describes the physical hardware
+   implementation, which **includes** the specific **sound card**
+   I am using, the *Audio Injector Octo*, as well as the **separate teensy 3.2**
+   running the *[teensyPiLooper](https://github.com/phorton1/Arduino-teensyPiLooper)*
+   INO program.
+
+- **[Software Architecture](software.md)** -
+    Describes the overall architecture of **this** C++ program (the *Looper*), which
+    runs in an environment that includes **[circle](https://github.com/phorton1/circle)** and
+    **[circle-prh](https://github.com/phorton1/circle-prh)** extensions.
+
+- **[User Interface](ui.md)** - Describes the window, buttons,
+   and overall **behavior** of this *Looper* from an end-user perspective.
+
+- **[Protocols and Communication](protocols.md)** - Describes, in more detail
+   how **communication** with the *Looper* happens, particularly the two way
+   communications it has, via serial data, with the
+   *[teensyExpression Pedal](https://github.com/phorton1/Arduino-teensyExpression)*.
+
+- **[Implementation Details](details.md)** - Describes
+  implementation details of the *Looper* including things like
+  the overal **process management** of the program, and details like
+  how **crossfading** in looping works.
+
+- **[Looper1](looper1.md)** and **[Looper2](looper2.md)** -
+  Contains the **3D printing information** and details about the
+  contents and construction of the specific instances of the *Looper* box I have
+  created, which all generally use the above hardware implementation,
+  sofware architecture, and communication protocols, presenting the same user
+  interface, but which differ only in their **physical contents**, and ***context***,
+  within my overall
+   *[rPi bare metal vGuitar rig](https://hackaday.io/project/165696-rpi-bare-metal-vguitar-rig)*
+  project.
+
+
+### Please Also See
+
+- my **[rPi bare metal vGuitar rig](https://hackaday.io/project/165696-rpi-bare-metal-vguitar-rig)**
+hackaday project.
+- my fork of the **[circle](https://github.com/phorton1/circle)** rPi bare metal C++ framework
+- my extensions to circle, including a port of the Teensy Audio library to
+rPi bare metal in the **[circle-prh](https://github.com/phorton1/circle-prh)** repository.
+- the **[teensyPiLooper](https://github.com/phorton1/Arduino-teensyPiLooper)**
+repository which contains the small INO program that runs on the Teensy 3.2
+- my 3D printed teensy 3.6 MIDI controller pedal, the
+**[teensyExpression Pedal](https://github.com/phorton1/Arduino-teensyExpression)**
+
+
+
 
 ## Note on Terminology - "Looper"
 
@@ -113,6 +168,11 @@ used in/with both of them.
   synchronously, at any given time.
   - the **layer** of a clip is it's position within a track.
 
+  *The number of tracks and clips are **constants** in the code. 4x4 works well
+  for me at this time, with the given screen real estate, and the controllers
+  I use, but it is relatively easy to to modify those constants in the code
+  to larger, or smaller valus.*
+
 ### Clips versus Tracks
 
   *Clips* play simultaneously, in parallel while *tracks* play sequentially, at
@@ -174,24 +234,27 @@ used in/with both of them.
   Once again, the currently *running* (recording or playing) track is referred to as the
   **current track**.
 
-  Many (or most) **Looper Commands** apply to the *selected track* and **may not take place
-  immediately**. For instance, if you are playing *Track1* and *Track2* is *empty*, and you
-  desire to record on it, you issue the **Track2 Command** (press the Track2 button) sometime
-  in the middle of Track1.   Then when the Looper cycles to the next *loop point* for Track1,
-  it will **automatically change to Track2 and begin recording**.
+  Some *Looper Commands* **may not take place immediately**.
 
-  But it doesn't happen right away.
+  For instance, if ***Track1*** is *playing* and ***Track2*** is *empty*, and you
+  desire to record on Track2, you issue the **Track2 Command** (press the Track2 button) sometime
+  while Track1 is playing.   Instead of immediately stopping Track1 and
+  beginning to record Track2, the looper will **wait** until it reaches the next
+  *loop point*, allowing the base clip (phrase) to complete before stopping Track1
+  and beginning to record Track2.
 
-  For that duration, these are called **Pending Commands**.  During the window of time
-  while the command is pending, the *current track* is playing, but the *selected track* is
+  For that duration, during that window of time, these are called **Pending Commands**.
+
+  While the command is pending, the *current track* is playing, but the *selected track* can be
   said to be **pending** a state change.  Thus, in this example, at the moment you press the Track2
   button (issue the *Track2 Command*), Track2 **becomes** the *selected track* ... different than
-  the current one ... and it has a *"pending state"* ... namely that it is *PENDING RECORDING*.
+  the current one, Track1 (which is *playing*) ... and Track2 is said to have a  *"pending state"*
+  ... namely that it is *PENDING RECORDING*.
 
   This distinction, between the *selected* and the *current* track, and the notion of
-  *Pending Commands* and a track's *pending state* are crucial to the usage ... the usability
-  of this program ... and is reflected in the user interface, and implementation,
-  of this and related project(s).
+  **Immediate** vs **Pending Commands** and a track's *pending state* are important to
+  understand, as the are reflected throughout the project(s) in the user interface and
+  implementation.
 
 ### Layers versus Clips
 
@@ -208,59 +271,6 @@ used in/with both of them.
   In practice, a *layer* is usually just an *integer* that
   identifies a clip within a track, and is also sometimes
   called *the clilp number*.
-
-
-## Organization of Documentation
-
-I have broken the discussion of this "project" into a number of readme files.
-
-- **[Hardware](hardware.md)** - Describes the physical hardware
-   implementation, which **includes** the specific **sound card**
-   I am using, the *Audio Injector Octo*, as well as the **separate teensy 3.2**
-   running the *[teensyPiLooper](https://github.com/phorton1/Arduino-teensyPiLooper)*
-   INO program.
-
-- **[Software Architecture](software.md)** -
-    Describes the overall architecture of **this** C++ program, which
-    runs in an environment that includes **[circle](https://github.com/phorton1/circle)** and
-    **[circle-prh](https://github.com/phorton1/circle-prh)** extensions.
-
-- **[User Interface](ui.md)** - Describes the window, buttons,
-   and overall **behaviors** of this *Looper* from an end-user perspective.
-
-- **[Protocols and Communication](protocols.md)** - Describes, in more detail
-   how **communication** with the *Looper* happens, particularly the two way
-   communications it has, via serial data, with the
-   *[teensyExpression Pedal](https://github.com/phorton1/Arduino-teensyExpression)*.
-
-- **[Implementation Details](details.md)** - Describes some
-  implementation details of the *Looper* including things like
-  the overal **process management** of the program, and details like
-  how **crossfading** in looping works.
-
-- **[Looper1](looper1.md)** and **[Looper2](looper2.md)** -
-  Contains information about the specific instances of the *Looper* box I have
-  physically created, which all generally use the above hardware implementation,
-  sofware architecture, and communication protocols, presenting the same user
-  interface, but which differ in their **physical contents**, and ***context***,
-  within my overall
-   *[rPi bare metal vGuitar rig](https://hackaday.io/project/165696-rpi-bare-metal-vguitar-rig)*
-  project.
-
-
-### Please Also See
-
-- my **[rPi bare metal vGuitar rig](https://hackaday.io/project/165696-rpi-bare-metal-vguitar-rig)**
-hackaday project.
-- my fork of the **[circle](https://github.com/phorton1/circle)** rPi bare metal C++ framework
-- my extensions to circle, including a port of the Teensy Audio library to
-rPi bare metal in the **[circle-prh](https://github.com/phorton1/circle-prh)** repository.
-- the **[teensyPiLooper](https://github.com/phorton1/Arduino-teensyPiLooper)**
-repository which contains the small INO program that runs on the Teensy 3.2
-- my 3D printed teensy 3.6 MIDI controller pedal, the
-**[teensyExpression Pedal](https://github.com/phorton1/Arduino-teensyExpression)**
-
-
 
 ### Personal Note
 

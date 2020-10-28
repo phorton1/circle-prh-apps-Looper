@@ -65,10 +65,10 @@ const char *getLoopCommandName(u16 cmd)
 	if (cmd == LOOP_COMMAND_LOOP_IMMEDIATE)		  return "LOOP!";
 	if (cmd == LOOP_COMMAND_SET_LOOP_START)       return "SET_START";
 	if (cmd == LOOP_COMMAND_CLEAR_LOOP_START)     return "CLR_START";
-    if (cmd == LOOP_COMMAND_TRACK_BASE+0)         return "TRACK0";
-    if (cmd == LOOP_COMMAND_TRACK_BASE+1)         return "TRACK1";
-    if (cmd == LOOP_COMMAND_TRACK_BASE+2)         return "TRACK2";
-    if (cmd == LOOP_COMMAND_TRACK_BASE+3)         return "TRACK3";
+    if (cmd == LOOP_COMMAND_TRACK_BASE+0)         return "TRACK1";
+    if (cmd == LOOP_COMMAND_TRACK_BASE+1)         return "TRACK2";
+    if (cmd == LOOP_COMMAND_TRACK_BASE+2)         return "TRACK3";
+    if (cmd == LOOP_COMMAND_TRACK_BASE+3)         return "TRACK4";
     if (cmd == LOOP_COMMAND_ERASE_TRACK_BASE+0)   return "ETRK0";
     if (cmd == LOOP_COMMAND_ERASE_TRACK_BASE+1)   return "ETRK1";
     if (cmd == LOOP_COMMAND_ERASE_TRACK_BASE+2)   return "ETRK2";

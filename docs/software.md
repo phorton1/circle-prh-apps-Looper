@@ -199,7 +199,7 @@ void wsApplication::Create()
 The uiWindow then creates the objects within it (the *uiTracks, uiClips, vuSliders*,
 and *wsButtons*) and returns.
 
-**TODO: annotated pic of UI**
+[![Looper UI](images/ui01-UI_annotated_resized.jpg)](images/ui01-UI_annotated.jpg)
 
 wsWindows, and objects derived from them, implement an **onDraw()** method that the
 system can call.

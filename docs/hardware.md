@@ -159,8 +159,8 @@ The teensy circuit board, in the "top" image above, has connectors for
 - 8 pin connector to the **LED/Button Board** at the *top right*
 - two rows of 14 pin connectors, and a sideways 2 pin connector, for the **teensy 3.2**
   and it's **program pin** to plug into, in the *center*
-- an 8 pin connector to connect to the *rPi* via the **teensy-rPi connector**, and
-- a 3 pin connector for a second hardware serial port, that is brought out to the
+- an 8 pin connector to connect to the *rPi* via the **teensy-rPi connector**, at the *bottom left* and
+- *next to it*, a 3 pin connector for a second hardware serial port, that is brought out to the
 side of the box to a 1/8" jack, that is used to connect to the
 *[teensyExpression Pedal](https://github.com/phorton1/Arduino-teensyExpression)*,
 as shown below.
