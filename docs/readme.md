@@ -12,8 +12,8 @@
 This repository contains the source code and other information required to
 build a bare metal rPi based Audio Looper.
 
-[![Looper1-openAndRunning](images/Looper1-openAndRunning_resized.jpg)](images/Looper1-openAndRunning.jpg)
-Looper1 *running an earlier version* of the program.
+[![Looper2](images/Looper2_resized.jpg)](images/Looper2.jpg)
+*Looper2*
 
 This project brings together what, until now, have been multiple disparate parts of the puzzle,
 and is a milestone in my **[rPi bare metal vGuitar rig](https://hackaday.io/project/165696-rpi-bare-metal-vguitar-rig)**
@@ -40,7 +40,7 @@ and use to play guitar with *effects*, a *midi synthesizer*, and controllable *l
 with a user interface (foot pedal) that I like, and that can be somewhat easily extended
 and programmed.
 
-Above is a photo of the first 3D printed version of the Looper.  There have
+Above is a photo of the most recent 3D printed version of the Looper.  There have
 been several phsyical iterations of the *box* and the *software continues to
 be developed*.
 
@@ -50,7 +50,7 @@ be developed*.
 
 This *readme* presents some basic concepts and a glossary.  The bulk of
 the information about the *Looper* is found in the following separate
-readme files:
+readme files and directories:
 
 - **[Hardware](hardware.md)** - Describes the physical hardware
    implementation, which **includes** the specific **sound card**
@@ -76,8 +76,13 @@ readme files:
   the overal **process management** of the program, and details like
   how **crossfading** in looping works.
 
+- **3D Printing** - The folder **"/3DP"** in this repository contains the
+  **Fusion360** and **STL** files as well as the *Prusa Specific* printing
+  profiles in **3MF** format and **gcode** files*. See the Looper1 and
+  Looper2 readme files, below, for more information.
+
 - **[Looper1](looper1.md)** and **[Looper2](looper2.md)** -
-  Contains the **3D printing information** and details about the
+  Contains details about the
   contents and construction of the specific instances of the *Looper* box I have
   created, which all generally use the above hardware implementation,
   sofware architecture, and communication protocols, presenting the same user
@@ -133,10 +138,10 @@ When I refer to **Looper1** or **Looper2**, I am talking about the instances
 of the 3D printed box I put on the floor.  They are **not** really different in
 their basic architecture and/or use of this code.
 
-[![Looper2](images/Looper2_resized.jpg)](images/Looper2.jpg)
-Looper2 (TODO: need a way better pic)
+[![Looper1-openAndRunning](images/Looper1-openAndRunning_resized.jpg)](images/Looper1-openAndRunning.jpg)
+*Looper1*, running a previous version of this program.
 
-The main difference between *Looper1* and *Looper2* is that *Loooper2*
+The main difference between *Looper1* and *Looper2* is that *Looper2*
 incorporates what was previously an external USB Audio Device, and an external
 USB router, ***INTO*** the physical 3D printed box.  This eliminated (at least)
 one piece of external hardware from my **rig** and goes to the architecture,
