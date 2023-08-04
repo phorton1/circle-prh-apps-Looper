@@ -2,6 +2,7 @@
 
 #include <audio\Audio.h>
 #include "Looper.h"
+#include "LooperVersion.h"
 
 // You may define zero or one of the following.
 // The default is wm8731.  You can also connect
@@ -58,7 +59,10 @@ publicLoopMachine *pTheLooper = 0;
 
 void setup()
 {
-    printf("11-aLooper::audio.cpp setup(%dx%d)\n",
+    // this is the first line of code executed in the _apps/Looper folder,
+    // so we show the version here ...
+
+    printf("Looper " LOOPER_VERSION " starting at audio.cpp setup(%dx%d)\n",
            LOOPER_NUM_TRACKS,
            LOOPER_NUM_LAYERS);
 
