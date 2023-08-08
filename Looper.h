@@ -75,13 +75,6 @@ typedef struct
 
 // controls
 
-#define CONTROL_INPUT_GAIN          0
-#define CONTROL_THRU_VOLUME         1
-#define CONTROL_LOOP_VOLUME         2
-#define CONTROL_MIX_VOLUME          3
-#define CONTROL_OUTPUT_GAIN         4
-#define LOOPER_NUM_CONTROLS                5
-
 typedef struct              // avoid byte sized structs
 {
     u16 value;              // 0..127

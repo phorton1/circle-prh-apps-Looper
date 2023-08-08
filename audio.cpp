@@ -76,8 +76,8 @@ void setup()
 
     AudioSystem::initialize(200);
 
-    pTheLooper->setControl(CONTROL_OUTPUT_GAIN,0);
-    pTheLooper->setControl(CONTROL_INPUT_GAIN,0);
+    pTheLooper->setControl(LOOPER_CONTROL_OUTPUT_GAIN,0);
+    pTheLooper->setControl(LOOPER_CONTROL_INPUT_GAIN,0);
     delay(100);
 
     #if !USE_CS42448 && !USE_TEENSY_QUAD_SLAVE
@@ -88,13 +88,13 @@ void setup()
     // set all volumes except output
     // and then ramp up the output volume
 
-    for (int i=CONTROL_THRU_VOLUME; i<=CONTROL_MIX_VOLUME; i++)
+    for (int i=LOOPER_CONTROL_THRU_VOLUME; i<=LOOPER_CONTROL_MIX_VOLUME; i++)
     {
         pTheLooper->setControl(i,pTheLooper->getControlDefault(i));
     }
 
-    float default_out_val = pTheLooper->getControlDefault(CONTROL_OUTPUT_GAIN);
-    float default_in_val = pTheLooper->getControlDefault(CONTROL_INPUT_GAIN);
+    float default_out_val = pTheLooper->getControlDefault(LOOPER_CONTROL_OUTPUT_GAIN);
+    float default_in_val = pTheLooper->getControlDefault(LOOPER_CONTROL_INPUT_GAIN);
 
     // bring the volume up over 1 second
     // the delays seem to help with conflict of Wire.cpp
@@ -105,9 +105,9 @@ void setup()
     {
         u8 in_val = roundf(default_in_val * ((float)j)/20.00);
         u8 out_val = roundf(default_out_val * ((float)j)/20.00 );
-        pTheLooper->setControl(CONTROL_INPUT_GAIN,in_val);
+        pTheLooper->setControl(LOOPER_CONTROL_INPUT_GAIN,in_val);
         delay(30);
-        pTheLooper->setControl(CONTROL_OUTPUT_GAIN,out_val);
+        pTheLooper->setControl(LOOPER_CONTROL_OUTPUT_GAIN,out_val);
         delay(30);
     }
 

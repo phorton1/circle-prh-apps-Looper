@@ -171,11 +171,11 @@ u8 publicLoopMachine::getControlDefault(u16 control)
 void publicLoopMachine::setControl(u16 control, u8 value)
 {
     float scale = ((float)value)/127.00;
-    if (control == CONTROL_INPUT_GAIN)
+    if (control == LOOPER_CONTROL_INPUT_GAIN)
     {
         ((AudioControlCS42448 *)pCodec)->inputLevel(scale);
     }
-    else if (control == CONTROL_OUTPUT_GAIN)
+    else if (control == LOOPER_CONTROL_OUTPUT_GAIN)
     {
         ((AudioControlCS42448 *)pCodec)->volume(scale);
     }
@@ -589,13 +589,13 @@ void loopMachine::update(void)
 
     #if WITH_VOLUMES
         #if WITH_INT_VOLUMES
-            int32_t thru_mult = m_control[CONTROL_THRU_VOLUME].multiplier;
-            int32_t loop_mult = m_control[CONTROL_LOOP_VOLUME].multiplier;
-            int32_t mix_mult = m_control[CONTROL_MIX_VOLUME].multiplier;
+            int32_t thru_mult = m_control[LOOPER_CONTROL_THRU_VOLUME].multiplier;
+            int32_t loop_mult = m_control[LOOPER_CONTROL_LOOP_VOLUME].multiplier;
+            int32_t mix_mult = m_control[LOOPER_CONTROL_MIX_VOLUME].multiplier;
         #else
-            float thru_level = m_control[CONTROL_THRU_VOLUME].scale;
-            float loop_level = m_control[CONTROL_LOOP_VOLUME].scale;
-            float mix_level =  m_control[CONTROL_MIX_VOLUME].scale;
+            float thru_level = m_control[LOOPER_CONTROL_THRU_VOLUME].scale;
+            float loop_level = m_control[LOOPER_CONTROL_LOOP_VOLUME].scale;
+            float mix_level =  m_control[LOOPER_CONTROL_MIX_VOLUME].scale;
         #endif
     #endif
 

@@ -281,8 +281,8 @@ void setup()
 
     AudioSystem::initialize(200);
 
-    pTheLooper->setControl(CONTROL_OUTPUT_GAIN,0);
-    pTheLooper->setControl(CONTROL_INPUT_GAIN,0);
+    pTheLooper->setControl(LOOPER_CONTROL_OUTPUT_GAIN,0);
+    pTheLooper->setControl(LOOPER_CONTROL_INPUT_GAIN,0);
 }
 ```
 

@@ -92,7 +92,7 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	#if WITH_METERS
 		new vuSlider(this,ID_VU2, 6, 2, 150, 28, true, 12,
 			METER_INPUT,
-			CONTROL_INPUT_GAIN,
+			LOOPER_CONTROL_INPUT_GAIN,
 			-1,							// cable
 			-1,							// 0 based channel
 			MIDI_EVENT_TYPE_INC_DEC2,	// slow continuous
@@ -105,7 +105,7 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	#if WITH_METERS
 		new vuSlider(this,ID_VU2, width-150, 2, width-6, 28, true, 12,
 			-1,		 					// no meter
-			CONTROL_OUTPUT_GAIN,
+			LOOPER_CONTROL_OUTPUT_GAIN,
 			-1,							// cable
 			-1,							// 0 based channel
 			MIDI_EVENT_TYPE_INC_DEC2,	// slow continuous
@@ -122,7 +122,7 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 
 		new vuSlider(this,ID_VU2,right_col+8, VU_TOP, right_col+40, VU_BOTTOM, false, 12,
 			METER_THRU,
-			CONTROL_THRU_VOLUME,
+			LOOPER_CONTROL_THRU_VOLUME,
 			-1,		// cable
 			-1,		// 0 based channel
 			MIDI_EVENT_TYPE_INC_DEC1,	// faster continous
@@ -140,7 +140,7 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 
 		new vuSlider(this,ID_VU3, right_col+52, VU_TOP, right_col+84, VU_BOTTOM, false, 12,
 			METER_LOOP,
-			CONTROL_LOOP_VOLUME,
+			LOOPER_CONTROL_LOOP_VOLUME,
 			-1,		// cable
 			-1,		// 0 based channel
 			MIDI_EVENT_TYPE_CC,			// jumpy CC for foot pedal
@@ -157,7 +157,7 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 
 		new vuSlider(this,ID_VU4, right_col+96, VU_TOP, right_col+128, VU_BOTTOM, false, 12,
 			METER_MIX,
-			CONTROL_MIX_VOLUME,
+			LOOPER_CONTROL_MIX_VOLUME,
 			-1,		// cable
 			-1,		// 0 based channel
 			MIDI_EVENT_TYPE_INC_DEC1,	// faster continous
