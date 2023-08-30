@@ -327,8 +327,8 @@ void uiWindow::updateFrame()
 
 			else if (num_read == 4)
 			{
-				if (buf[0] == 0x0b &&			// CC messages
-					buf[1] == 0xb0)
+				if (buf[0] == 0x0b &&			// 0x0b == CC messages
+					buf[1] == 0xb0)				// 0xb0 == CC messages on channel 1
 				{
 					handleSerialCC(buf[2],buf[3]);
 				}
