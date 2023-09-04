@@ -149,6 +149,12 @@ void uiClip::updateFrame()
 				m_track_num * LOOPER_NUM_LAYERS + m_clip_num;
 			sendSerialMidiCC(cc_num,mute);
 		}
+		if (m_volume != vol)
+		{
+			int cc_num = CLIP_VOL_BASE_CC +
+				m_track_num * LOOPER_NUM_LAYERS + m_clip_num;
+			sendSerialMidiCC(cc_num,vol);
+		}
 		m_mute = mute;
 		m_volume = vol;
 	}

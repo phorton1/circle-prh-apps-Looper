@@ -48,6 +48,7 @@
 
 CSerialDevice *s_pSerial = 0;
 
+
 // extern
 void sendSerialMidiCC(int cc_num, int value)
 {
@@ -219,6 +220,8 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 
 	stop_button_cmd = 0;
 		// goes with the blank below
+	send_state = 0;
+
 	pStopButton = new
 		#if USE_MIDI_SYSTEM
 			wsMidiButton(
@@ -398,6 +401,11 @@ void uiWindow::updateFrame()
 		sendSerialMidiCC(LOOP_DUB_STATE_CC,dub_mode);
 	}
 
+	// updateFrame is the least time critical place to put stuff
+	// it is called UI_FRAME_RATE (currently 30) times per second
+	if (send_state)
+		sendState();
+
 	wsWindow::updateFrame();
 }
 
@@ -544,7 +552,13 @@ void uiWindow::handleSerialCC(u8 cc_num, u8 value)
 
 	else if (cc_num == LOOP_COMMAND_CC)
 	{
-		pTheLooper->command(value);
+		if (value == LOOP_COMMAND_GET_STATE)
+		{
+			LOOPER_LOG("LOOP_COMMAND_GET_STATE()",0);
+			send_state = 1;		// start sending midi state messags
+		}
+		else
+			pTheLooper->command(value);
 	}
 
 	else if (cc_num >= CLIP_VOL_BASE_CC &&
@@ -568,5 +582,70 @@ void uiWindow::handleSerialCC(u8 cc_num, u8 value)
 		publicTrack *pTrack = pTheLooper->getPublicTrack(track_num);
 		publicClip *pClip = pTrack->getPublicClip(clip_num);
 		pClip->setMute(value);
+	}
+}
+
+
+
+void uiWindow::sendState()
+	// a state machine to send 134 CC messages one at a time
+	// Because UI_FRAME_RATE is 30, this will take 4.5 seconds
+	// to complete when booting a rig that calls LOOP_COMMAND_GET_STATE
+{
+	#define FIRST_TRACK_SEND_STATE   3
+	#define NUM_SENDS_PER_TRACK		 33
+		// we send the track_stqte and 16 mute and volume states for each track
+
+	if (send_state == 1)
+	{
+		sendSerialMidiCC(LOOP_STOP_CMD_STATE_CC,
+			pTheLooper->getRunning() ?
+			pTheLooper->getPendingCommand() == LOOP_COMMAND_STOP ?
+				LOOP_COMMAND_STOP_IMMEDIATE :
+				LOOP_COMMAND_STOP : 0);
+		send_state++;
+	}
+	else if (send_state == 2)
+	{
+		sendSerialMidiCC(LOOP_DUB_STATE_CC,pTheLooper->getDubMode());
+		send_state++;
+	}
+	else if (send_state < FIRST_TRACK_SEND_STATE + LOOPER_NUM_TRACKS * NUM_SENDS_PER_TRACK)
+	{
+		int track_num = (send_state - FIRST_TRACK_SEND_STATE) / NUM_SENDS_PER_TRACK;
+		int sub_num = (send_state - FIRST_TRACK_SEND_STATE) % NUM_SENDS_PER_TRACK;	// 0..32
+		publicTrack *pTrack = pTheLooper->getPublicTrack(track_num);
+
+		// send the track state
+
+		if (sub_num == 0)
+		{
+			sendSerialMidiCC(TRACK_STATE_BASE_CC + track_num,pTrack->getTrackState() & 0xff);
+		}
+
+		// send 16 clip mute sttes then 16 mutes for this track
+
+		else
+		{
+			sub_num--;	// 0..31
+			int fxn_num = sub_num > (LOOPER_NUM_TRACKS * LOOPER_NUM_LAYERS) ? 1 : 0;
+			int part_num = sub_num % (LOOPER_NUM_TRACKS * LOOPER_NUM_LAYERS);	 // 0..15
+			int clip_num = part_num / LOOPER_NUM_LAYERS;	// 0..3
+			publicClip  *pClip  = pTrack->getPublicClip(clip_num);
+
+			if (fxn_num)
+			{
+				sendSerialMidiCC(CLIP_VOL_BASE_CC + part_num, pClip->getVolume());
+			}
+			else
+			{
+				sendSerialMidiCC(CLIP_MUTE_BASE_CC + part_num, pClip->isMuted());
+			}
+		}
+		send_state++;
+	}
+	else
+	{
+		send_state = 0;
 	}
 }

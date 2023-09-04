@@ -313,14 +313,16 @@ as to be **notified** when the *state* of the looper changes.
 Those are defined programatically in **commonDefines.h**
 
 ```
-LOOP_CONTROL_BASE_CC   0x65   // cc is the vol control. value is 0..127
-LOOP_STOP_CMD_STATE_CC 0x26   // tells client if the stop button should be lit
-LOOP_DUB_STATE_CC      0x25   // tell client if dub button should be lit
-LOOP_COMMAND_CC        0x24   // the value is the LOOP command
-TRACK_STATE_BASE_CC    0x14   // for 0..3 tracks, value is track state
-CLIP_VOL_BASE_CC       0x30   // for 4 tracks * 4 clips - value is volume 0..127
-CLIP_MUTE_BASE_CC      0x50   // for 4 tracks * 3 clips - value is mute state
-NOTIFY_LOOP            0x64   // sent at loop points
+// Looper Serial CC numbers             // TE       rPi         descrip
+#define LOOP_COMMAND_CC        0x01		// send     recv        the value is the LOOP command
+#define LOOP_STOP_CMD_STATE_CC 0x02		// recv     send        the value is 0, LOOP_COMMAND_STOP or STOP_IMMEDIATE
+#define LOOP_DUB_STATE_CC      0x03		// recv     send        value is currently only the DUB state
+#define NOTIFY_LOOP            0x05     // recv     send        value=number of pending loop notifies
+#define LOOP_CONTROL_BASE_CC   0x08     // both     both        RANGED for 0..LOOPER_NUM_CONTROLS the value is the volume control (Looper pedal == 0x67)
+#define TRACK_STATE_BASE_CC    0x10		// recv     send        RANGED for NUM_TRACKS, upto 16 tracks, value is track state
+#define CLIP_VOL_BASE_CC       0x20		// both     both        RANGED for NUM_TRACKS * NUM_LAYERS, upto 32 total - value is the clip volume
+#define CLIP_MUTE_BASE_CC      0x40		// both     both        RANGED for NUM_TRACKS * NUM_LAYERS, upto 24 total - value is mute state
+	// this leaves a little space for expansion from 0x60 to 0x7f
 ```
 
 These are sent, or received, by the *[teensyExpression pedal](https://github.com/phorton1/Arduino-teensyExpression)*
@@ -330,6 +332,23 @@ Track1-4 buttons, just like the *Looper* and those buttons, with addressable col
 that can be set to green, yellow, or red, and/or can **flash** just like the *frames around clips
 on Looper screen*. This provides a completely separate, yet consistent, floor based (foot pedal),
 User Interface to the Looper.
+
+As of v2.11 there is a new LOOP_COMMAND
+
+```
+#define LOOP_COMMAND_GET_STATE			0x30	  // NEW the looper will dump all state
+	// dumping the state will send
+	//      LOOP_STOP_CMD_STATE_CC
+	//      LOOP_DUB_STATE_CC
+	// 		TRACK_STATE_BASE_CC for NUM_TRACKS
+	//		CLIP_VOL_BASE_CC for NUM_TRACKS * NUM_LAYERS
+	// 		CLIP_MUTE_BASE_CC for NUM_TRACKS * NUM_LAYERS
+	// We do not currently send
+	//		LOOP_CONTROL_BASE for LOOPER_NUM_CONTROLS(6)
+	// Because TE just always pushes the volume controls
+```
+
+Which will send all of the state from the Looper to TE.
 
 
 *-------------- end of *ui.md* ---------------------*

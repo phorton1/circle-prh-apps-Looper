@@ -25,6 +25,7 @@ class uiWindow : public wsTopLevelWindow
 
 		u16  stop_button_cmd;
 		bool last_shown_dub_mode;
+		int send_state;
 
 		wsButton *pStopButton;
 		wsButton *pDubButton;
@@ -34,6 +35,7 @@ class uiWindow : public wsTopLevelWindow
 		static void staticSerialReceiveIRQHandler(void *pThis, unsigned char c);
 		void serialReceiveIRQHandler(unsigned char c);
 		void handleSerialCC(u8 cc_num, u8 value);
+		void sendState();
 
 		int serial_midi_len;
 		unsigned char serial_midi_buf[4];
