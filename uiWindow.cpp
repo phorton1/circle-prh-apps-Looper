@@ -571,6 +571,7 @@ void uiWindow::handleSerialCC(u8 cc_num, u8 value)
 		publicTrack *pTrack = pTheLooper->getPublicTrack(track_num);
 		publicClip *pClip = pTrack->getPublicClip(clip_num);
 		pClip->setVolume(value);
+		sendSerialMidiCC(cc_num,value);				// echo back to TE
 	}
 	else if (cc_num >= CLIP_MUTE_BASE_CC &&
 			 cc_num < CLIP_MUTE_BASE_CC  + LOOPER_NUM_TRACKS * LOOPER_NUM_LAYERS)
@@ -582,6 +583,7 @@ void uiWindow::handleSerialCC(u8 cc_num, u8 value)
 		publicTrack *pTrack = pTheLooper->getPublicTrack(track_num);
 		publicClip *pClip = pTrack->getPublicClip(clip_num);
 		pClip->setMute(value);
+		sendSerialMidiCC(cc_num,value);				// echo back to TE
 	}
 }
 
