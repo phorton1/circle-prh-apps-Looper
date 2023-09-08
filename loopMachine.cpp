@@ -400,6 +400,24 @@ void loopMachine::command(u16 command)
             m_pending_command = 0;
         }
 
+		// otherwise, if the track is the selected track this has the
+		// effect cancelling any pending command and reverting to the
+		// current running track, if any
+
+        else if (track_num == m_selected_track_num)
+        {
+            m_pending_command = 0;
+            if (m_selected_track_num != -1)
+				m_tracks[m_selected_track_num]->setSelected(false);
+            if (m_running)
+			{
+				m_selected_track_num = m_cur_track_num;
+				m_tracks[m_selected_track_num]->setSelected(true);
+			}
+			else
+				m_selected_track_num = -1;
+        }
+
         pTrack->init();
     }
 
