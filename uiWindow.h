@@ -3,6 +3,8 @@
 #define _uiWindow_h_
 
 #include <ws/ws.h>
+#include "commonDefines.h"
+
 
 #define ID_WIN_LOOPER    	100
 #define NUM_TRACK_BUTTONS   4
@@ -23,9 +25,12 @@ class uiWindow : public wsTopLevelWindow
 		virtual void updateFrame();
 		virtual u32 handleEvent(wsEvent *event);
 
-		u16  stop_button_cmd;
-		bool last_shown_dub_mode;
 		int send_state;
+		bool last_dub_mode;
+		u16  stop_button_cmd;
+		int control_vol[LOOPER_NUM_CONTROLS];
+		int clip_vol[LOOPER_NUM_TRACKS][LOOPER_NUM_LAYERS];
+		bool clip_mute[LOOPER_NUM_TRACKS][LOOPER_NUM_LAYERS];
 
 		wsButton *pStopButton;
 		wsButton *pDubButton;

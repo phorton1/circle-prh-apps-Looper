@@ -142,19 +142,6 @@ void uiClip::updateFrame()
 	{
 		setBit(m_state, WIN_STATE_DRAW | WIN_STATE_REDRAW);
 		m_draw_text	= true;
-
-		if (m_mute != mute)
-		{
-			int cc_num = CLIP_MUTE_BASE_CC +
-				m_track_num * LOOPER_NUM_LAYERS + m_clip_num;
-			sendSerialMidiCC(cc_num,mute);
-		}
-		if (m_volume != vol)
-		{
-			int cc_num = CLIP_VOL_BASE_CC +
-				m_track_num * LOOPER_NUM_LAYERS + m_clip_num;
-			sendSerialMidiCC(cc_num,vol);
-		}
 		m_mute = mute;
 		m_volume = vol;
 	}

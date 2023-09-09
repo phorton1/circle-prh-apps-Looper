@@ -71,7 +71,27 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 {
 	LOG("uiWindow ctor",0);
 
-	last_shown_dub_mode = 0;
+	// Init Members
+
+	send_state = 1;
+	last_dub_mode = 0;
+	stop_button_cmd = 0;
+	serial_midi_len = 0;
+	for (int i=0; i<LOOPER_NUM_CONTROLS; i++)
+	{
+		control_vol[i] = 0;
+	}
+	for (int i=0; i<LOOPER_NUM_TRACKS; i++)
+	{
+		for (int j=0; j<LOOPER_NUM_LAYERS; j++)
+		{
+			clip_mute[i][j] = 0;
+			clip_vol[i][j] = 0;
+		}
+	}
+
+
+	// Init UI
 
 	setBackColor(wsDARK_BLUE);
 
@@ -99,7 +119,6 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 			MIDI_EVENT_TYPE_INC_DEC2,	// slow continuous
 			0x0A);						// LSB
 	#endif
-
 
 	// TOP RIGHT OUTPUT VU METER - output gain, no monitor
 
@@ -166,8 +185,6 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 			0x00);
 	#endif
 
-
-
 	// UI TRACKS
 	// and TRACK buttons
 
@@ -218,9 +235,7 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 		LOG("finished creating ui_track(%d)",i);
 	}
 
-	stop_button_cmd = 0;
-		// goes with the blank below
-	send_state = 0;
+	// Stop and Dub Buttons
 
 	pStopButton = new
 		#if USE_MIDI_SYSTEM
@@ -241,7 +256,6 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	pStopButton->setFont(wsFont12x16);
 	pStopButton->hide();
 
-
 	pDubButton = new
 		#if USE_MIDI_SYSTEM
 			wsMidiButton(
@@ -260,10 +274,8 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	pDubButton->setAltBackColor(wsSLATE_GRAY);
 	pDubButton->setFont(wsFont12x16);
 
+	// register handlers
 
-	// register handler
-
-	serial_midi_len = 0;
 	s_pSerial = CCoreTask::Get()->GetKernel()->GetSerial();
 
 	#if USE_SERIAL_INTERRUPTS
@@ -391,20 +403,55 @@ void uiWindow::updateFrame()
 	// and notifies the TE of any changes
 
 	bool dub_mode = pTheLooper->getDubMode();
-	if (dub_mode != last_shown_dub_mode)
+	if (dub_mode != last_dub_mode)
 	{
 		LOG("updateState dub mode=%d",dub_mode);
-		last_shown_dub_mode = dub_mode;
+		last_dub_mode = dub_mode;
 		int bc = dub_mode ? wsORANGE : defaultButtonReleasedColor;
 		pDubButton->setBackColor(bc);
 		pDubButton->setStateBits(WIN_STATE_DRAW);
 		sendSerialMidiCC(LOOP_DUB_STATE_CC,dub_mode);
 	}
 
-	// updateFrame is the least time critical place to put stuff
-	// it is called UI_FRAME_RATE (currently 30) times per second
+	// Send initial state or check for midi state changes
+
 	if (send_state)
+	{
 		sendState();
+	}
+	else
+	{
+		for (int i=0; i<LOOPER_NUM_CONTROLS; i++)
+		{
+			int vol = pTheLooper->getControlValue(i);
+			if (control_vol[i] != vol)
+			{
+				control_vol[i] = vol;
+				sendSerialMidiCC(LOOP_CONTROL_BASE_CC+i,vol);
+			}
+		}
+
+		for (int i=0; i<LOOPER_NUM_TRACKS; i++)
+		{
+			publicTrack *pTrack = pTheLooper->getPublicTrack(i);
+			for (int j=0; j<LOOPER_NUM_LAYERS; j++)
+			{
+				bool mute = pTrack->getPublicClip(j)->isMuted();
+				if (clip_mute[i][j] != mute)
+				{
+					clip_mute[i][j] = mute;
+					sendSerialMidiCC(CLIP_MUTE_BASE_CC + i*LOOPER_NUM_LAYERS + j,mute);
+				}
+				u8 vol = pTrack->getPublicClip(j)->getVolume();
+				if (clip_vol[i][j] != vol)
+				{
+					clip_vol[i][j] = vol;
+					sendSerialMidiCC(CLIP_VOL_BASE_CC + i*LOOPER_NUM_LAYERS + j,vol);
+				}
+			}
+		}
+
+	}	// !send_state
 
 	wsWindow::updateFrame();
 }
@@ -546,6 +593,12 @@ void uiWindow::handleSerialCC(u8 cc_num, u8 value)
 	{
 		int control_num = cc_num - LOOP_CONTROL_BASE_CC;
 		pTheLooper->setControl(control_num,value);
+		control_vol[control_num] = value;
+			// DONT ECHO IT back to TE
+			// The control_vol value must be set AFTER the control change
+			// or else, based on timing, it can be detected as a change
+			// in updaateRframe() because the value has NOT YET changed.
+			// Even then there *might* be occasional spurious sends.
 	}
 
 	// CC's that map to buttons
@@ -589,17 +642,24 @@ void uiWindow::handleSerialCC(u8 cc_num, u8 value)
 
 
 
+
 void uiWindow::sendState()
-	// a state machine to send 134 CC messages in discreet packets
-	// Because UI_FRAME_RATE is 30, this will take 4.5 seconds
-	// to complete when booting a rig that calls LOOP_COMMAND_GET_STATE
 {
-	#define FIRST_TRACK_SEND_STATE   2
+	#define FIRST_TRACK_SEND_STATE   3
 	#define NUM_SENDS_PER_TRACK		 3
 		// we send the track state and the first four volumes in the first bunch
 		// then we send 3 more groups of four volumes, and then 4 groups of mutes
 
 	if (send_state == 1)
+	{
+		for (int i=0; i<LOOPER_NUM_CONTROLS; i++)
+		{
+			control_vol[i] = pTheLooper->getControlValue(i);
+			sendSerialMidiCC(LOOP_CONTROL_BASE_CC+i,control_vol[i]);
+		}
+		send_state++;
+	}
+	else if (send_state == 2)
 	{
 		sendSerialMidiCC(LOOP_STOP_CMD_STATE_CC,
 			pTheLooper->getRunning() ?
@@ -621,17 +681,21 @@ void uiWindow::sendState()
 		}
 		else if (sub_num == 1)
 		{
-			sendSerialMidiCC(CLIP_VOL_BASE_CC + track_num*LOOPER_NUM_LAYERS + 0, pTrack->getPublicClip(0)->getVolume());
-			sendSerialMidiCC(CLIP_VOL_BASE_CC + track_num*LOOPER_NUM_LAYERS + 1, pTrack->getPublicClip(1)->getVolume());
-			sendSerialMidiCC(CLIP_VOL_BASE_CC + track_num*LOOPER_NUM_LAYERS + 2, pTrack->getPublicClip(2)->getVolume());
-			sendSerialMidiCC(CLIP_VOL_BASE_CC + track_num*LOOPER_NUM_LAYERS + 3, pTrack->getPublicClip(3)->getVolume());
+			for (int j=0; j<LOOPER_NUM_LAYERS; j++)
+			{
+				bool mute = pTrack->getPublicClip(j)->isMuted();
+				clip_mute[track_num][j] = mute;
+				sendSerialMidiCC(CLIP_MUTE_BASE_CC + track_num*LOOPER_NUM_LAYERS + j, mute);
+			}
 		}
 		else // sub_num == 2
 		{
-			sendSerialMidiCC(CLIP_MUTE_BASE_CC + track_num*LOOPER_NUM_LAYERS + 0, pTrack->getPublicClip(0)->isMuted());
-			sendSerialMidiCC(CLIP_MUTE_BASE_CC + track_num*LOOPER_NUM_LAYERS + 1, pTrack->getPublicClip(1)->isMuted());
-			sendSerialMidiCC(CLIP_MUTE_BASE_CC + track_num*LOOPER_NUM_LAYERS + 2, pTrack->getPublicClip(2)->isMuted());
-			sendSerialMidiCC(CLIP_MUTE_BASE_CC + track_num*LOOPER_NUM_LAYERS + 3, pTrack->getPublicClip(3)->isMuted());
+			for (int j=0; j<LOOPER_NUM_LAYERS; j++)
+			{
+				u8 vol = pTrack->getPublicClip(0)->getVolume();
+				clip_vol[track_num][j] = vol;
+				sendSerialMidiCC(CLIP_VOL_BASE_CC + track_num*LOOPER_NUM_LAYERS + j, vol);
+			}
 		}
 
 		send_state++;

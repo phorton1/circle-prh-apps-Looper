@@ -38,6 +38,7 @@ class uiTrack : public wsWindow
 
 		u8 m_track_num;
 		bool m_selected;
+		int m_last_track_state;
 
 		u16 m_num_running;
 		u16 m_num_used;
@@ -46,7 +47,6 @@ class uiTrack : public wsWindow
 		virtual void onDraw();
 		virtual void updateFrame();
 
-		int m_last_te_track_state;
 
 };	// _uiTrack_h
 

@@ -67,7 +67,7 @@ uiTrack::uiTrack(
 		offset += cheight + CLIP_BUTTON_SPACE;
 	}
 
-	m_last_te_track_state = 0;
+	m_last_track_state = 0;
 }
 
 
@@ -104,9 +104,9 @@ void uiTrack::updateFrame()
 
 	bool track_changed = 0;
 	int track_state = pTrack->getTrackState();
-	if (track_state != m_last_te_track_state)
+	if (m_last_track_state != track_state)
 	{
-		m_last_te_track_state = track_state;
+		m_last_track_state = track_state;
 		track_changed = 1;
 
 		#if 1
