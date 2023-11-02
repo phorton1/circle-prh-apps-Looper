@@ -223,7 +223,7 @@ was playing, **the looper would not stop**!
 In the below image, within the white framed Track, the **frames around the clips** are **flashing**
 yellow and red.
 
-[![pending](images/ui05-pending_resized.jpg)](images/ui04-pending.jpg) *Pending Clip States*
+[![pending](images/ui05-pending_resized.jpg)](images/ui05-pending.jpg) *Pending Clip States*
 
 In the above photo, the yellow *base clip* is playing, the red *clip2* is recording, but *both*
 have flashing yellow frames indicating that they are **pending playing** at the next loop point,
