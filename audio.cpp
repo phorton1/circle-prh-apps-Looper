@@ -3,6 +3,9 @@
 #include <audio\Audio.h>
 #include "Looper.h"
 #include "LooperVersion.h"
+#include <circle/logger.h>
+
+#define log_name "audio"
 
 // You may define zero or one of the following.
 // The default is wm8731.  You can also connect
@@ -62,9 +65,9 @@ void setup()
     // this is the first line of code executed in the _apps/Looper folder,
     // so we show the version here ...
 
-    printf("Looper " LOOPER_VERSION " starting at audio.cpp setup(%dx%d)\n",
-           LOOPER_NUM_TRACKS,
-           LOOPER_NUM_LAYERS);
+    LOG("Looper " LOOPER_VERSION " starting at audio.cpp setup(%dx%d)",
+        LOOPER_NUM_TRACKS,
+        LOOPER_NUM_LAYERS);
 
     pTheLoopMachine = new loopMachine();
     pTheLooper = (publicLoopMachine *) pTheLoopMachine;
@@ -111,7 +114,7 @@ void setup()
         delay(30);
     }
 
-    printf("11-aLooper::audio.cpp setup() finished\n");
+    LOG("11-aLooper::audio.cpp setup() finished",0);
 
 }
 
