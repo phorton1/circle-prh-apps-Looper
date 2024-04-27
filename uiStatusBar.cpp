@@ -95,20 +95,22 @@ void uiStatusBar::updateFrame()
 // virtual
 void uiStatusBar::onDraw()
 {
-
 	m_pDC->setClip(m_clip_client,m_state & WIN_STATE_INVALID);
 	m_pDC->setBackColor(m_back_color);
 
 	#if USER_STATUS_BAR
-		m_pDC->setForeColor(wsWHITE);
-		m_pDC->setFont(wsFont12x16);
 
 		CString msg1;
 		msg1.Format("%d %%",pct_used);
+		m_pDC->setFont(wsFont12x16);
 
-		m_pDC->putString(
-			m_clip_client.xs + 220,
-			m_clip_client.ys + 10,
+		m_pDC->putText(
+			m_back_color,
+			wsWHITE,
+			m_rect_client,
+			ALIGN_CENTER,
+			0,	// hspace,
+			0,	// vspace,
 			(const char *)msg1);
 	#else
 		m_pDC->setForeColor(m_fore_color);
