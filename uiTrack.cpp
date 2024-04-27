@@ -33,6 +33,8 @@ uiTrack::uiTrack(
 		// WIN_STYLE_TOUCH
 		// WIN_STYLE_CLICK
 {
+	LOG("uiTrack(%d) ctor(%d,%d,%d,%d)",track_num,xs,ys,xe,ye);
+
 	m_pUIWindow = pParent;
 
 	m_track_num = track_num;

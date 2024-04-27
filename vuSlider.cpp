@@ -25,7 +25,7 @@ vuSlider::vuSlider(wsWindow *pParent,u16 id, s32 xs, s32 ys, s32 xe, s32 ye,
 		s16 midi_param2) :	    // LSB
     wsWindow(pParent,id,xs,ys,xe,ye,WIN_STYLE_TOUCH | WIN_STYLE_DRAG)
 {
-	LOG("vuSlider(%08x,%d,%d) ctor",(u32)this,meter_num,control_num);
+	LOG("vuSlider(%d,%d) ctor(%d,%d,%d,%d)",meter_num,control_num,xs,ys,xe,ye);
 
     m_horz = horz;
     m_num_divs = num_divs;
@@ -93,6 +93,7 @@ void vuSlider::updateFrame()
 		setBit(m_state,WIN_STATE_DRAW);
 	}
 
+	return;
 
 	if (m_meter_num < 0)	// slider only
 		return;
