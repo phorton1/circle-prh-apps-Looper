@@ -25,11 +25,11 @@ void wsApplication::Create()
 
 	// SPLASH SCREEN
 
-	wsDC *pDC = new wsDC(m_pScreen);
+
 	wsRect full_screen(0,0,m_pScreen->GetWidth()-1,m_pScreen->GetHeight()-1);
-	pDC->setFont(wsFont16x26);
-	pDC->fillScreen( wsDARK_CYAN );
-	pDC->putText(
+	m_pDC->setFont(wsFont16x26);
+	m_pDC->fillScreen( wsDARK_CYAN );
+	m_pDC->putText(
 		wsDARK_CYAN,
 		wsBLACK,
 		full_screen,
