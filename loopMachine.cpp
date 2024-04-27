@@ -173,11 +173,11 @@ void publicLoopMachine::setControl(u16 control, u8 value)
     float scale = ((float)value)/127.00;
     if (control == LOOPER_CONTROL_INPUT_GAIN)
     {
-        ((AudioControlCS42448 *)pCodec)->inputLevel(scale);
+        pCodec->inputLevel(scale);
     }
     else if (control == LOOPER_CONTROL_OUTPUT_GAIN)
     {
-        ((AudioControlCS42448 *)pCodec)->volume(scale);
+        pCodec->volume(scale);
     }
     else
     {
