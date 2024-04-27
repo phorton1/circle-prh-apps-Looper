@@ -34,17 +34,137 @@
 #define ID_LOOP_TRACK_BUTTON_BASE   410
 #define ID_ERASE_TRACK_BUTTON_BASE  430
 
+// The official 7" rPI Screen is 800 x 400 == 2:1
+// The small screen is 480 x 320 = 1.5:1
+// Old VU meters: top  144x26, right:32x180, note
+// that VU meters are divisible by 12
 
-#define TOP_MARGIN 			72
-#define BOTTOM_MARGIN  		50
-#define RIGHT_MARGIN    	150
 
-#define VU_TOP  	TOP_MARGIN+46
-#define VU_BOTTOM   VU_TOP + 180
+//-------------------
+// Y Layout
+//-------------------
+// Screen is split into four vertical areas
 
-#define TRACK_VSPACE  	5
-#define TRACK_HSPACE  	5
-#define BUTTON_HEIGHT   35
+#define TOP_MARGIN					2		// stuff is really scrunched at the top
+#define TOP_HEIGHT					26		// height of top horiz VU meters and status bar
+
+#define TOP_BUTTON_MARGIN			5		// from vu meters to ERASE buttons and VU labels
+#define TOP_BUTTON_HEIGHT			24		// height of erase buttons and VU labels
+
+#define TRACK_TOP_MARGIN			5		// from erase buttons to tracks / vu meters
+#define TRACK_BOTTOM_MARGIN			5		// from track bottoms to track buttons
+
+#define BUTTON_HEIGHT				34		// height of bottom buttons
+#define BOTTOM_MARGIN				5		// space at bottom of screen
+
+// Y position of objects
+
+#define TOP_VU_SY					(TOP_MARGIN)
+#define TOP_VU_EY					(TOP_VU_SY + TOP_HEIGHT - 1)
+
+#define STATUS_SY					(TOP_VU_SY)
+#define STATUS_EY					(TOP_VU_EY)
+
+#define TOP_BUTTON_SY				(TOP_VU_EY + TOP_BUTTON_MARGIN)
+#define TOP_BUTTON_EY				(TOP_BUTTON_SY + TOP_BUTTON_HEIGHT - 1)
+
+#define TRACK_SY					(TOP_BUTTON_EY + TRACK_TOP_MARGIN)
+#define TRACK_EY					(BUTTON_SY - TRACK_BOTTOM_MARGIN)
+
+#define VU_SY						(TRACK_SY)
+#define VU_EY						(TRACK_EY)
+	// VU meters need to be a multiple of 12!
+	// should correct this in the ctor
+
+#define BUTTON_SY					(height - BOTTOM_MARGIN - BUTTON_HEIGHT - 1)
+#define BUTTON_EY					(BUTTON_SY + BUTTON_HEIGHT - 1)
+
+
+//-------------------
+// X layout
+//-------------------
+// Screen is split into LEFT/RIGHT track and vu areas
+// based on fixed margins and the VU widths
+
+#define TOP_VU_WIDTH				144			// width of top horiz VU meters; status bar takes space left over
+#define TOP_LEFT_MARGIN				5
+#define TOP_RIGHT_MARGIN			5
+#define STATUS_MARGIN				5
+
+#define TOP_LEFT_VU_SX		(TOP_LEFT_MARGIN)							// start x for left top VU meter
+#define TOP_LEFT_VU_EX		(TOP_LEFT_VU_SX + TOP_VU_WIDTH - 1)			// end x for top left VU meter
+#define TOP_RIGHT_VU_SX		(width-TOP_VU_WIDTH-TOP_RIGHT_MARGIN - 1)	// start x for right top VU meter
+#define TOP_RIGHT_VU_EX		(TOP_RIGHT_VU_SX + TOP_VU_WIDTH - 1)		// end x for top right VU meter
+
+// The top status bar has the same height as the VU meters
+// and fits between them
+
+#define STATUS_SX		(TOP_LEFT_VU_EX + STATUS_MARGIN)
+#define STATUS_EX		(TOP_RIGHT_VU_SX - STATUS_MARGIN )
+
+// RIGHT SIDE
+
+#define VU_WIDTH					30
+#define VU_RIGHT_MARGIN				10			// right vu meters
+#define VU_INTER_MARGIN				8			// and to left and right for labels
+
+#define VU_RIGHT_SX					(width - VU_RIGHT_MARGIN - VU_WIDTH - 1)
+#define VU_MIDDLE_SX				(VU_RIGHT_SX - VU_WIDTH - VU_INTER_MARGIN)
+#define VU_LEFT_SX					(VU_MIDDLE_SX - VU_WIDTH - VU_INTER_MARGIN)
+#define VU_LEFT_EX					(VU_LEFT_SX + VU_WIDTH - 1)
+#define VU_MIDDLE_EX				(VU_MIDDLE_SX + VU_WIDTH - 1)
+#define VU_RIGHT_EX					(VU_RIGHT_SX + VU_WIDTH - 1)
+
+#define VU_LABEL1_SX				(VU_LEFT_SX - 2)
+#define VU_LABEL1_EX				(VU_LEFT_EX + 2)
+#define VU_LABEL2_SX				(VU_MIDDLE_SX - 2)
+#define VU_LABEL2_EX				(VU_MIDDLE_EX + 2)
+#define VU_LABEL3_SX				(VU_RIGHT_SX - 2)
+#define VU_LABEL3_EX				(VU_RIGHT_EX + 2)
+
+
+#define TRACK_LEFT_MARGIN			5
+#define TRACK_RIGHT_MARGIN			8
+#define TRACK_INTER_MARGIN			5
+
+#define TRACK_AREA_SX				(TRACK_LEFT_MARGIN)
+#define TRACK_AREA_EX				(VU_LEFT_SX - TRACK_RIGHT_MARGIN)
+#define TRACK_AREA_WIDTH			(TRACK_AREA_EX - TRACK_AREA_SX + 1)
+#define TRACK_STEP					(TRACK_AREA_WIDTH/LOOPER_NUM_TRACKS)
+#define TRACK_WIDTH					((TRACK_AREA_WIDTH - TRACK_INTER_MARGIN * (LOOPER_NUM_TRACKS-1))/LOOPER_NUM_TRACKS)
+
+// the stop and dub buttons split the area under the right vu meters
+// with a 5 pixel margin to the tracks and to the right
+
+#define BOTTOM_BUTTON_MARGIN		5
+
+#define STOP_BUTTON_SX				(TRACK_AREA_EX + 2)
+
+#define OTHER_BUTTON_AREA_WIDTH		(width - STOP_BUTTON_SX - 1)
+#define OTHER_BUTTON_WIDTH 			((OTHER_BUTTON_AREA_WIDTH - BOTTOM_BUTTON_MARGIN)/2)
+
+// compensate to make stop button a little bigger on small screen
+
+#define STOP_BUTTON_EX				(STOP_BUTTON_SX + OTHER_BUTTON_WIDTH - 1     + 5)
+#define DUB_BUTTON_SX				(STOP_BUTTON_EX + BOTTOM_BUTTON_MARGIN)
+#define DUB_BUTTON_EX				(DUB_BUTTON_SX + OTHER_BUTTON_WIDTH - 1      - 5)
+
+
+
+
+// old
+//
+//	#define TOP_MARGIN 			72		// allows for top VU meters and erase buttons
+//	#define BOTTOM_MARGIN  		50		// allows for Track buttons and Dub button
+//	#define RIGHT_MARGIN    	150		// allows for vertical VU meters
+//
+//	#define VU_TOP  	TOP_MARGIN+46	// allows for a title above each vertical VU meter
+//	#define VU_BOTTOM   VU_TOP + 180	// fixed height VU meters
+//
+//	#define TRACK_VSPACE  	5
+//	#define TRACK_HSPACE  	5
+//	#define BUTTON_HEIGHT   35
+
 
 CSerialDevice *s_pSerial = 0;
 
@@ -69,7 +189,7 @@ void sendSerialMidiCC(int cc_num, int value)
 uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) :
 	wsTopLevelWindow(pApp,id,xs,ys,xe,ye)
 {
-	LOG("uiWindow ctor",0);
+	LOG("uiWindow ctor(%d,%d,%d,%d)",xs,ys,xe,ye);
 
 	// Init Members
 
@@ -97,9 +217,14 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 
 	int height = ye-ys+1;
     int width = xe-xs+1;
-	int right_col = width - RIGHT_MARGIN;
+	// int right_col = width - RIGHT_MARGIN;
 
-	new uiStatusBar(this,ID_LOOP_STATUS_BAR,165,0,width-165,TOP_MARGIN-1);
+	new uiStatusBar(this,ID_LOOP_STATUS_BAR,
+		STATUS_SX,
+		STATUS_SY,
+		STATUS_EX,
+		STATUS_EY);
+		// 165,0,width-165,TOP_MARGIN-1);
 	LOG("status bar created",0);
 
 	// TOP LEFT INPUT VU METER - CODEC audio input, period
@@ -107,11 +232,17 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	// ith increments of two
 	//
 	//   in:DEC2(0x0A)		  		out:DEC2(0z0B)
-	//   unuaed:CC(0x0C)      		mix:DEC1(0x0D:0x00) scale=2
+	//   unused:CC(0x0C)      		mix:DEC1(0x0D:0x00) scale=2
 	//   thru:DEC1(0x0E,0x00)=2     loop:CC(0x0F)
 
 	#if WITH_METERS
-		new vuSlider(this,ID_VU2, 6, 2, 150, 28, true, 12,
+		new vuSlider(this, ID_VU2,
+			TOP_LEFT_VU_SX,
+			TOP_VU_SY,
+			TOP_LEFT_VU_EX,
+			TOP_VU_EY,
+			// 6, 2, 150, 28,
+			true, 12,
 			METER_INPUT,
 			LOOPER_CONTROL_INPUT_GAIN,
 			-1,							// cable
@@ -123,7 +254,13 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	// TOP RIGHT OUTPUT VU METER - output gain, no monitor
 
 	#if WITH_METERS
-		new vuSlider(this,ID_VU2, width-150, 2, width-6, 28, true, 12,
+		new vuSlider(this,ID_VU2,
+			TOP_RIGHT_VU_SX,
+			TOP_VU_SY,
+			TOP_RIGHT_VU_EX,
+			TOP_VU_EY,
+			// width-150, 2, width-6, 28,
+			true, 12,
 			-1,		 					// no meter
 			LOOPER_CONTROL_OUTPUT_GAIN,
 			-1,							// cable
@@ -135,12 +272,23 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	// LEFT - THRU vu
 
 	#if WITH_METERS
-		wsStaticText *pt1 = new wsStaticText(this,0,"THRU",right_col+6,TOP_MARGIN+23,right_col+42,TOP_MARGIN+39);
-		pt1->setAlign(ALIGN_CENTER);
+		wsStaticText *pt1 = new wsStaticText(this,0,"THRU",
+			// right_col+6,TOP_MARGIN+23,right_col+42,TOP_MARGIN+39
+			VU_LABEL1_SX,
+			TOP_BUTTON_SY,
+			VU_LABEL1_EX,
+			TOP_BUTTON_EY );
+		pt1->setAlign(ALIGN_BOTTOM_CENTER);
 		pt1->setForeColor(wsWHITE);
 		pt1->setFont(wsFont7x12);
 
-		new vuSlider(this,ID_VU2,right_col+8, VU_TOP, right_col+40, VU_BOTTOM, false, 12,
+		new vuSlider(this,ID_VU2,
+			VU_LEFT_SX,
+			VU_SY,
+			VU_LEFT_EX,
+			VU_EY,
+			// right_col+8, VU_TOP, right_col+40, VU_BOTTOM,
+			false, 12,
 			METER_THRU,
 			LOOPER_CONTROL_THRU_VOLUME,
 			-1,		// cable
@@ -153,12 +301,23 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	// MIDDLE - LOOP vu
 
 	#if WITH_METERS
-		wsStaticText *pt2 = new wsStaticText(this,0,"LOOP",right_col+50,TOP_MARGIN+23,right_col+86,TOP_MARGIN+39);
-		pt2->setAlign(ALIGN_CENTER);
+		wsStaticText *pt2 = new wsStaticText(this,0,"LOOP",
+			// right_col+50,TOP_MARGIN+23,right_col+86,TOP_MARGIN+39,
+			VU_LABEL2_SX,
+			TOP_BUTTON_SY,
+			VU_LABEL2_EX,
+			TOP_BUTTON_EY );
+		pt2->setAlign(ALIGN_BOTTOM_CENTER);
 		pt2->setForeColor(wsWHITE);
 		pt2->setFont(wsFont7x12);
 
-		new vuSlider(this,ID_VU3, right_col+52, VU_TOP, right_col+84, VU_BOTTOM, false, 12,
+		new vuSlider(this,ID_VU3,
+			VU_MIDDLE_SX,
+			VU_SY,
+			VU_MIDDLE_EX,
+			VU_EY,
+			// right_col+52, VU_TOP, right_col+84, VU_BOTTOM,
+			false, 12,
 			METER_LOOP,
 			LOOPER_CONTROL_LOOP_VOLUME,
 			-1,		// cable
@@ -170,12 +329,23 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	// RIGHT - MIX vu
 
 	#if WITH_METERS
-		wsStaticText *pt3 = new wsStaticText(this,0,"MIX",right_col+94,TOP_MARGIN+23,right_col+130,TOP_MARGIN+39);
-		pt3->setAlign(ALIGN_CENTER);
+		wsStaticText *pt3 = new wsStaticText(this,0,"MIX",
+			// right_col+94,TOP_MARGIN+23,right_col+130,TOP_MARGIN+39
+			VU_LABEL3_SX,
+			TOP_BUTTON_SY,
+			VU_LABEL3_EX,
+			TOP_BUTTON_EY );
+		pt3->setAlign(ALIGN_BOTTOM_CENTER);
 		pt3->setForeColor(wsWHITE);
 		pt3->setFont(wsFont7x12);
 
-		new vuSlider(this,ID_VU4, right_col+96, VU_TOP, right_col+128, VU_BOTTOM, false, 12,
+		new vuSlider(this,ID_VU4,
+			VU_RIGHT_SX,
+			VU_SY,
+			VU_RIGHT_EX,
+			VU_EY,
+			// right_col+96, VU_TOP, right_col+128, VU_BOTTOM,
+			false, 12,
 			METER_MIX,
 			LOOPER_CONTROL_MIX_VOLUME,
 			-1,		// cable
@@ -190,30 +360,37 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 
 	LOG("creating ui_tracks and track buttons",0);
 
-	int btop = height-BOTTOM_MARGIN;
-	int cheight = height-TOP_MARGIN-BOTTOM_MARGIN-TRACK_VSPACE*2;
-	int cwidth = (width-RIGHT_MARGIN-1-TRACK_HSPACE*(LOOPER_NUM_TRACKS+1)) / LOOPER_NUM_TRACKS;
-	int step = TRACK_HSPACE;
+	int start_x = TRACK_AREA_SX;
+	// int btop = height-BOTTOM_MARGIN;
+	// int cheight = height-TOP_MARGIN-BOTTOM_MARGIN-TRACK_VSPACE*2;
+	// int cwidth = (width-RIGHT_MARGIN-1-TRACK_HSPACE*(LOOPER_NUM_TRACKS+1)) / LOOPER_NUM_TRACKS;
+	// int step = TRACK_HSPACE;
 	for (int i=0; i<LOOPER_NUM_TRACKS; i++)
 	{
 		LOG("creating ui_track(%d)",i);
+		int end_x = start_x + TRACK_WIDTH - 1;
+		
 		new uiTrack(
 			i,
 			this,
 			ID_TRACK_CONTROL_BASE + i,
-			step,
-			TOP_MARGIN + TRACK_VSPACE,
-			step + cwidth -1,
-			TOP_MARGIN + TRACK_VSPACE + cheight - 1);
+			start_x, TRACK_SY, end_x, TRACK_EY);
+			// step,
+			// TOP_MARGIN + TRACK_VSPACE,
+			// step + cwidth -1,
+			// TOP_MARGIN + TRACK_VSPACE + cheight - 1);
 
+		CString track_name;
+		track_name.Format("%d",i+1);
 		pTrackButtons[i] = new 	wsButton(
 			this,
 			ID_LOOP_TRACK_BUTTON_BASE + i,
-			getLoopCommandName(LOOP_COMMAND_TRACK_BASE + i),
-			step+10,
-			btop+5,
-			step + cwidth - 10,
-			btop+5+BUTTON_HEIGHT-1,
+			(const char *) track_name, // getLoopCommandName(LOOP_COMMAND_TRACK_BASE + i),
+			start_x+2, BUTTON_SY, end_x-2, BUTTON_EY,
+			// step+10,
+			// btop+5,
+			// step + cwidth - 10,
+			// btop+5+BUTTON_HEIGHT-1,
 			BTN_STYLE_USE_ALTERNATE_COLORS);
 		pTrackButtons[i]->setFont(wsFont12x16);
 		pTrackButtons[i]->setAltBackColor(wsSLATE_GRAY);
@@ -222,16 +399,19 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 			this,
 			ID_ERASE_TRACK_BUTTON_BASE + i,
 			"erase",
-			step+10,
-			40,
-			step + cwidth - 10,
-			40+BUTTON_HEIGHT-10-1,
+			start_x+2, TOP_BUTTON_SY, end_x-2, TOP_BUTTON_EY,
+			// step+10,
+			// 40,
+			// step + cwidth - 10,
+			// 40+BUTTON_HEIGHT-10-1,
 			BTN_STYLE_USE_ALTERNATE_COLORS);
-		// pEraseButtons[i]->setFont(wsFont12x16);
+		pEraseButtons[i]->setFont(wsFont8x14);
 		pEraseButtons[i]->setAltBackColor(wsSLATE_GRAY);
 		pEraseButtons[i]->hide();
 
-		step += cwidth + TRACK_HSPACE;
+		start_x += TRACK_STEP;
+		
+		// step += cwidth + TRACK_HSPACE;
 		LOG("finished creating ui_track(%d)",i);
 	}
 
@@ -246,10 +426,14 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 			this,
 			ID_LOOP_STOP_BUTTON,
 			"blah",		// button does not start off with a function: getLoopCommandName(LOOP_COMMAND_STOP),
-			right_col + 3,
-			btop+5-55,
-			width - 12,
-			btop+5-55+BUTTON_HEIGHT+5-1,
+			STOP_BUTTON_SX,
+			BUTTON_SY,
+			STOP_BUTTON_EX,
+			BUTTON_EY,
+			// right_col + 3,
+			// btop+5-55,
+			// width - 12,
+			// btop+5-55+BUTTON_HEIGHT+5-1,
 			BTN_STYLE_USE_ALTERNATE_COLORS,
 			WIN_STYLE_CLICK_LONG);
 	pStopButton->setAltBackColor(wsSLATE_GRAY);
@@ -265,10 +449,14 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 			this,
 			ID_LOOP_DUB_BUTTON,
 			getLoopCommandName(LOOP_COMMAND_DUB_MODE),
-			right_col + 3,
-			btop+5,
-			width - 12,
-			btop+5+BUTTON_HEIGHT-1,
+			DUB_BUTTON_SX,
+			BUTTON_SY,
+			DUB_BUTTON_EX,
+			BUTTON_EY,
+			// right_col + 3,
+			// btop+5,
+			// width - 12,
+			// btop+5+BUTTON_HEIGHT-1,
 			BTN_STYLE_USE_ALTERNATE_COLORS,
 			WIN_STYLE_CLICK_LONG);
 	pDubButton->setAltBackColor(wsSLATE_GRAY);
