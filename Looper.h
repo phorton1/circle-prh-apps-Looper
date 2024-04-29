@@ -49,7 +49,14 @@
 #define CROSSFADE_BLOCKS     30
     // The number of buffers (10 == approx 30ms) to continue recording
 
-#define LOOP_HEAP_BYTES  (60 * 4 * 3 * AUDIO_BLOCK_BYTES * 2 * INTEGRAL_BLOCKS_PER_SECOND)
+#define LOOP_TRACK_SECONDS  (60 * LOOPER_NUM_TRACKS * LOOPER_NUM_LAYERS)
+    // Allowing for 60 seconds per clip per track overall, for example,
+    // equals 960 overall track seconds.  A stero set of 128 s16 sample
+    // buffers is 512 bytes. Rounding up to 346 buffers per second at
+    // that's 177,152 bytes per second.  960 track seconds, therefore,
+    // is about 170M,  There's still 600M+ of memory available on the pi
+
+#define LOOP_HEAP_BYTES  (LOOP_TRACK_SECONDS * AUDIO_BLOCK_BYTES * 2 * INTEGRAL_BLOCKS_PER_SECOND)
     // 1440 track seconds, 496,800 blocks == 127,1800,00 bytes == approx 128M
 
 #define INTEGRAL_BLOCKS_PER_SECOND  ((AUDIO_SAMPLE_RATE + (AUDIO_BLOCK_SAMPLES-1)) / AUDIO_BLOCK_SAMPLES)
