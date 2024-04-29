@@ -93,7 +93,8 @@ void vuSlider::updateFrame()
 		setBit(m_state,WIN_STATE_DRAW);
 	}
 
-	return;
+	// short return for testing while trying to ferret out BCMPCM noise issues
+	// return;
 
 	if (m_meter_num < 0)	// slider only
 		return;
