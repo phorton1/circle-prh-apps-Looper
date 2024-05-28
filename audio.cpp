@@ -11,9 +11,9 @@
 // You can also connect to the teensy audio card (STGL500)
 // or a teensy running the AudioInputI2SQuad device.
 
-#define USE_CS42448				1
+#define USE_CS42448				0
 #define USE_WM8731				0
-#define USE_STGL5000			0
+#define USE_STGL5000			1
 #define USE_TEENSY_QUAD_SLAVE	0
 
 #if USE_CS42448
@@ -47,9 +47,9 @@
 
 	// the rpi cannot be a master to an sgtl5000.
 	// the sgtl5000 requires 3 clocks and the rpi can only generate 2
-	AudioInputI2Sslave input;
-	AudioOutputI2Sslave output;
-	AudioControlSGTL5000master control;
+	AudioInputI2S input;
+	AudioOutputI2S output;
+	AudioControlSGTL5000 control;
 
 #elif USE_TEENSY_QUAD_SLAVE
 
@@ -72,8 +72,8 @@ void setup()
 	// so we show the version here ...
 
 	LOG("Looper " LOOPER_VERSION " starting at audio.cpp setup(%dx%d)",
-	LOOPER_NUM_TRACKS,
-	LOOPER_NUM_LAYERS);
+		LOOPER_NUM_TRACKS,
+		LOOPER_NUM_LAYERS);
 
 	pTheLoopMachine = new loopMachine();
 	pTheLooper = (publicLoopMachine *) pTheLoopMachine;
@@ -89,10 +89,16 @@ void setup()
 	pTheLooper->setControl(LOOPER_CONTROL_INPUT_GAIN,0);
 	delay(100);
 
-	#if !USE_CS42448 && !USE_TEENSY_QUAD_SLAVE
+	#if USE_WM8731
 		// some devices do not have these controls
 		control.inputSelect(AUDIO_INPUT_LINEIN);
 	#endif
+
+	#if USE_STGL5000
+		// some devices do not have these controls
+		control.setDefaults();
+	#endif
+
 
 	// set all volumes except output
 	// and then ramp up the output volume
@@ -120,7 +126,7 @@ void setup()
 		delay(30);
 	}
 
-	LOG("11-aLooper::audio.cpp setup() finished",0);
+	LOG("aLooper::audio.cpp setup() finished",0);
 
 }
 
