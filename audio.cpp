@@ -11,12 +11,27 @@
 // You can also connect to the teensy audio card (STGL500)
 // or a teensy running the AudioInputI2SQuad device.
 
-#define USE_CS42448				1		// MUST BE SET FOR ACTUAL OLD LOOPER2 BUILD!!!
+// LOOPER2 uses the CS42448 octo
+// LOOPER3 (TE3) uses the TEENSY_QUAD_SLAVE
+
+#ifdef LOOPER3
+	#pragma message("compiling Looper::audio.cpp for LOOPER3")
+	#define USE_CS42448				0		// MUST BE SET FOR ACTUAL OLD LOOPER2 BUILD!!!
+	#define USE_TEENSY_QUAD_SLAVE	1
+#else
+	#pragma message("compiling Looper::audio.cpp for LOOPER2")
+	#define USE_CS42448				1		// MUST BE SET FOR ACTUAL OLD LOOPER2 BUILD!!!
+	#define USE_TEENSY_QUAD_SLAVE	0
+#endif
+
+// These two are not in mainline use
 #define USE_WM8731				0
 #define USE_STGL5000			0
-#define USE_TEENSY_QUAD_SLAVE	0
+
 
 #if USE_CS42448
+
+	#pragma message("Looper::audio.cpp using CS42448 (octo)")
 
 	// Octo is always the master
 	AudioInputTDM input;
@@ -24,6 +39,8 @@
 	AudioControlCS42448 control;
 
 #elif USE_WM8731
+
+	#pragma message("Looper::audio.cpp using WM8731")
 
 	// wm8731 in master or slave mode
 	// Connect the outputs to the RCA jacks
@@ -45,6 +62,8 @@
 
 #elif USE_STGL5000  // only in slave mode
 
+	#pragma message("Looper::audio.cpp using STGL5000")
+
 	// the rpi cannot be a master to an sgtl5000.
 	// the sgtl5000 requires 3 clocks and the rpi can only generate 2
 	AudioInputI2S input;
@@ -52,6 +71,8 @@
 	AudioControlSGTL5000 control;
 
 #elif USE_TEENSY_QUAD_SLAVE
+
+	#pragma message("Looper::audio.cpp using TEENSY_QUAD_SLAVE")
 
 	AudioInputTeensyQuad   input;
 	AudioOutputTeensyQuad  output;
@@ -74,7 +95,12 @@ void setup()
 	LOG("Looper " LOOPER_VERSION " starting at audio.cpp setup(%dx%d)",
 		LOOPER_NUM_TRACKS,
 		LOOPER_NUM_LAYERS);
-
+	#ifdef LOOPER3
+		LOG("audio.cpp compiled for LOOPER3",0);
+	#else
+		LOG("audio.cpp compiled for LOOPER2",0);
+	#endif
+	
 	pTheLoopMachine = new loopMachine();
 	pTheLooper = (publicLoopMachine *) pTheLoopMachine;
 

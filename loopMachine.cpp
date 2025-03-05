@@ -88,7 +88,10 @@ publicLoopMachine::publicLoopMachine() :
 {
     LOG("publicLoopMachine ctor",0);
     pCodec = AudioCodec::getSystemCodec();
-    assert(pCodec);
+
+	if (!pCodec)
+		LOG_WARNING("No audio system codec!",0);
+    // assert(pCodec);
 
     m_pFirstLogString = 0;
     m_pLastLogString = 0;
@@ -173,11 +176,13 @@ void publicLoopMachine::setControl(u16 control, u8 value)
     float scale = ((float)value)/127.00;
     if (control == LOOPER_CONTROL_INPUT_GAIN)
     {
-        pCodec->inputLevel(scale);
+        if (pCodec)
+			pCodec->inputLevel(scale);
     }
     else if (control == LOOPER_CONTROL_OUTPUT_GAIN)
     {
-        pCodec->volume(scale);
+        if (pCodec)
+			pCodec->volume(scale);
     }
     else
     {
