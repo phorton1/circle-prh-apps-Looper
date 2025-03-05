@@ -6,6 +6,16 @@
 #include "commonDefines.h"
 
 
+#ifdef LOOPER3
+	#define PIN_LED_LOOPER_BUSY	6
+		// added a busy led for looper3
+#else
+	#define PIN_LED_LOOPER_BUSY	0
+#endif
+
+
+
+
 #define ID_WIN_LOOPER    	100
 #define NUM_TRACK_BUTTONS   4
 
@@ -19,6 +29,9 @@ class uiWindow : public wsTopLevelWindow
 
 		void enableEraseButton(int i, bool enable);
 
+		#if PIN_LED_LOOPER_BUSY
+			CGPIOPin   busy_led;
+		#endif
 
 	private:
 

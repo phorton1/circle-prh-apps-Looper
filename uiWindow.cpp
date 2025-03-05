@@ -168,6 +168,10 @@
 
 CSerialDevice *s_pSerial = 0;
 
+#if PIN_LED_LOOPER_BUSY
+	static unsigned busy_timer = 0;
+#endif
+
 
 // extern
 void sendSerialMidiCC(int cc_num, int value)
@@ -188,7 +192,14 @@ void sendSerialMidiCC(int cc_num, int value)
 
 uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) :
 	wsTopLevelWindow(pApp,id,xs,ys,xe,ye)
+	#if PIN_LED_LOOPER_BUSY
+		,busy_led(PIN_LED_LOOPER_BUSY, GPIOModeOutput)
+	#endif
 {
+	#if PIN_LED_LOOPER_BUSY
+		busy_led.Write(1);
+	#endif
+
 	LOG("uiWindow ctor(%d,%d,%d,%d)",xs,ys,xe,ye);
 
 	// Init Members
@@ -209,7 +220,6 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 			clip_vol[i][j] = 0;
 		}
 	}
-
 
 	// Init UI
 
@@ -475,6 +485,9 @@ uiWindow::uiWindow(wsApplication *pApp, u16 id, s32 xs, s32 ys, s32 xe, s32 ye) 
 	#endif
 
 	LOG("uiWindow ctor finished",0);
+	#if PIN_LED_LOOPER_BUSY
+		busy_led.Write(0);
+	#endif
 
 }	// uiWindow ctor
 
@@ -530,6 +543,10 @@ void uiWindow::updateFrame()
 
 			else if (num_read == 4)
 			{
+				#if PIN_LED_LOOPER_BUSY
+					busy_led.Write(1);
+					busy_timer = CTimer::Get()->GetClockTicks()
+				#endif
 				if (buf[0] == 0x0b &&			// 0x0b == CC messages
 					buf[1] == 0xb0)				// 0xb0 == CC messages on channel 1
 				{
@@ -642,6 +659,18 @@ void uiWindow::updateFrame()
 	}	// !send_state
 
 	wsWindow::updateFrame();
+
+	#if PIN_LED_LOOPER_BUSY
+		if (busy_timer)
+		{
+			unsigned now = CTimer::Get()->GetClockTicks();
+			if (now - busy_timer > 700000)	// microseconds
+			{
+				busy_timer = 0;
+				busy_led.Write(0);
+			}
+		}
+	#endif
 }
 
 
@@ -727,6 +756,8 @@ void uiWindow::staticSerialReceiveIRQHandler(void *pThis, unsigned char c)
 }
 
 
+
+
 void uiWindow::serialReceiveIRQHandler(unsigned char c)
 {
 	if (!serial_midi_len)
@@ -734,6 +765,10 @@ void uiWindow::serialReceiveIRQHandler(unsigned char c)
 		if (c == 0x0b)
 		{
 			serial_midi_buf[serial_midi_len++] = c;		// start serial midi message
+			#if PIN_LED_LOOPER_BUSY
+				busy_led.Write(1);
+				busy_timer = CTimer::Get()->GetClockTicks();
+			#endif
 		}
 		else
 		{
