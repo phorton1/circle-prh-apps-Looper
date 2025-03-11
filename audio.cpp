@@ -18,10 +18,12 @@
 	#pragma message("compiling Looper::audio.cpp for LOOPER3")
 	#define USE_CS42448				0		// MUST BE SET FOR ACTUAL OLD LOOPER2 BUILD!!!
 	#define USE_TEENSY_QUAD_SLAVE	1
+	#define USE_STANDARD_I2S		0
 #else
 	#pragma message("compiling Looper::audio.cpp for LOOPER2")
 	#define USE_CS42448				1		// MUST BE SET FOR ACTUAL OLD LOOPER2 BUILD!!!
 	#define USE_TEENSY_QUAD_SLAVE	0
+	#define USE_STANDARD_I2S		0
 #endif
 
 // These two are not in mainline use
@@ -47,14 +49,14 @@
 	// Connect the input to the microphone jack,
 	// or use the control.inputSelect(AUDIO_INPUT_LINEIN);
 
-	#define I2S_MASTER    1
+	#define WM8731_IS_I2S_MASTER    1
 		// the rPi is a horrible i2s master.
-		// It is better with the wm831 as the master i2s device
+		// It is much better with the wm831 as the master i2s device
 
 	AudioInputI2S input;
 	AudioOutputI2S output;
 
-	#if I2S_MASTER
+	#if WM8731_IS_I2S_MASTER
 		AudioControlWM8731 control;
 	#else
 		AudioControlWM8731Slave control;
@@ -74,8 +76,19 @@
 
 	#pragma message("Looper::audio.cpp using TEENSY_QUAD_SLAVE")
 
+	// I am currently using this with a mod to the bcm_pcm::static_init() call
+
 	AudioInputTeensyQuad   input;
 	AudioOutputTeensyQuad  output;
+
+#elif USE_STANDARD_I2S
+
+	// prh - the reason this doesn't work at all is that there is
+	// no bcm_pcm setup() and crucially, no call to bcm_pcm.begin()!!!
+	
+	AudioInputI2S input;
+	AudioOutputI2S output;
+	#pragma message("Looper::audio.cpp using STANDARD I2S")
 
 #endif
 
